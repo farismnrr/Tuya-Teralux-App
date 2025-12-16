@@ -33,6 +33,45 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 	// Get config
 	config := utils.GetConfig()
 
+	// 1. Fetch Device Detais to get correct GatewayID (InfraredID)
+	// Build URL path for fetching device details
+	deviceUrlPath := fmt.Sprintf("/v1.0/iot-03/devices/%s", remoteID)
+	deviceFullURL := config.TuyaBaseURL + deviceUrlPath
+	
+	// Generate timestamp for device fetch
+	deviceTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+	// Calculate content hash for empty body (GET request)
+	hEmpty := sha256.New()
+	hEmpty.Write([]byte(""))
+	deviceContentHash := hex.EncodeToString(hEmpty.Sum(nil))
+	
+	// Generate signature for device fetch
+	deviceStringToSign := utils.GenerateTuyaStringToSign("GET", deviceContentHash, "", deviceUrlPath)
+	deviceSignature := utils.GenerateTuyaSignature(config.TuyaClientID, config.TuyaClientSecret, accessToken, deviceTimestamp, deviceStringToSign)
+	
+	// Prepare headers for device fetch
+	deviceHeaders := map[string]string{
+		"client_id":    config.TuyaClientID,
+		"sign":         deviceSignature,
+		"t":            deviceTimestamp,
+		"sign_method":  "HMAC-SHA256",
+		"access_token": accessToken,
+	}
+
+	// Call FetchDeviceByID
+	log.Printf("DEBUG SendIRACCommand: Fetching device details for RemoteID=%s", remoteID)
+	deviceResp, err := uc.service.FetchDeviceByID(deviceFullURL, deviceHeaders)
+	if err != nil {
+		log.Printf("WARNING: Failed to fetch device details for IR command: %v. Continuing with provided infraredID.", err)
+	} else if deviceResp.Success && deviceResp.Result.GatewayID != "" {
+		log.Printf("DEBUG SendIRACCommand: Found GatewayID=%s for device %s. Using it as InfraredID.", deviceResp.Result.GatewayID, remoteID)
+		infraredID = deviceResp.Result.GatewayID
+	} else {
+		log.Printf("DEBUG SendIRACCommand: No GatewayID found in device details. Using provided infraredID=%s", infraredID)
+	}
+
+	// 2. Send IR Command
 	// Generate timestamp
 	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	signMethod := "HMAC-SHA256"
