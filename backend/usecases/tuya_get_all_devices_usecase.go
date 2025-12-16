@@ -25,6 +25,27 @@ func NewTuyaGetAllDevicesUseCase(service *services.TuyaDeviceService) *TuyaGetAl
 }
 
 // GetAllDevices retrieves all devices from Tuya API
+//
+// Tuya API Interactions:
+// 
+// 1. List Devices by User:
+//    URL: https://openapi.tuyacn.com/v1.0/users/{uid}/devices
+//    Method: GET
+//    Auth: Standard Token Auth
+//
+// 2. Get Device Specifications (for each device):
+//    URL: https://openapi.tuyacn.com/v1.0/iot-03/devices/{device_id}/specification
+//    Method: GET
+//    Purpose: Retrieves function definitions (DP codes) and status mappings. 
+//             Crucial for identifying valid command codes (e.g., switch1 vs switch_1).
+//
+// 3. Batch Get Device Status:
+//    URL: https://openapi.tuyacn.com/v1.0/iot-03/devices/status?device_ids=id1,id2...
+//    Method: GET
+//    Purpose: Retrieves real-time online/offline status and current DP values for multiple devices.
+//
+// Response Aggregation:
+//    Combines basic device info, static specifications, and dynamic real-time status into a unified DTO.
 func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dtos.TuyaDevicesResponseDTO, error) {
 	// Get config
 	config := utils.GetConfig()

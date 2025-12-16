@@ -1,4 +1,4 @@
-package usecases
+																																																																																																																																																							package usecases
 
 import (
 	"crypto/sha256"
@@ -24,6 +24,31 @@ func NewTuyaAuthUseCase(service *services.TuyaAuthService) *TuyaAuthUseCase {
 }
 
 // Authenticate retrieves access token from Tuya API
+//
+// Tuya API Documentation (Get Token):
+// URL: https://openapi.tuyacn.com/v1.0/token?grant_type=1
+// Method: GET
+//
+// Headers:
+//   - client_id: Your Tuya Client ID
+//   - sign: HMAC-SHA256(client_id + t + stringToSign)
+//   - t: timestamp (ms)
+//   - sign_method: HMAC-SHA256
+//
+// StringToSign Format:
+//   GET\n{content_hash}\n\n{url}
+//   (content_hash is SHA256 of empty string for GET)
+//
+// Response:
+//   {
+//     "success": true,
+//     "result": {
+//       "access_token": "...",
+//       "refresh_token": "...",
+//       "expire_time": 7200,
+//       "uid": "..."
+//     }
+//   }
 func (uc *TuyaAuthUseCase) Authenticate() (*dtos.TuyaAuthResponseDTO, error) {
 	// Get config
 	config := utils.GetConfig()

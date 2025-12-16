@@ -24,6 +24,19 @@ func NewTuyaGetDeviceByIDUseCase(service *services.TuyaDeviceService) *TuyaGetDe
 }
 
 // GetDeviceByID retrieves a single device by ID from Tuya API
+//
+// Tuya API Documentation (Get Device):
+// URL: https://openapi.tuyacn.com/v1.0/devices/{device_id}
+// Method: GET
+//
+// Headers:
+//   - client_id, sign, t, sign_method, access_token
+//
+// StringToSign:
+//   GET\n{content_hash}\n\n{url}
+//
+// Response:
+//   Standard Device Info + Status DPs
 func (uc *TuyaGetDeviceByIDUseCase) GetDeviceByID(accessToken, deviceID string) (*dtos.TuyaDeviceDTO, error) {
 	// Get config
 	config := utils.GetConfig()
