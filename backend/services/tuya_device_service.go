@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"teralux_app/entities"
+	"teralux_app/utils"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,14 +72,19 @@ func (s *TuyaDeviceService) FetchDevices(url string, headers map[string]string) 
 	// Parse response
 	var devicesResponse entities.TuyaDevicesResponse
 	if err := json.Unmarshal(body, &devicesResponse); err != nil {
+		utils.LogError("FetchDevices: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+
+	utils.LogDebug("FetchDevices success: found %d devices", len(devicesResponse.Result))
 
 	return &devicesResponse, nil
 }
 
 // FetchDeviceByID makes HTTP request to get a single device by ID from Tuya API
 func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]string) (*entities.TuyaDeviceResponse, error) {
+	utils.LogDebug("FetchDeviceByID: requesting %s", url)
+
 	// MOCK FOR TESTS
 	if gin.Mode() == gin.TestMode {
 		// Simulate Invalid Token Error
@@ -103,6 +109,7 @@ func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]strin
 	// Create HTTP request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.LogError("FetchDeviceByID: failed to create request: %v", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -114,6 +121,7 @@ func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]strin
 	// Execute request
 	resp, err := s.client.Do(req)
 	if err != nil {
+		utils.LogError("FetchDeviceByID: failed to execute request: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -121,17 +129,23 @@ func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]strin
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		utils.LogError("FetchDeviceByID: failed to read response: %v", err)
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	// DEBUG LOG RAW BODY
+	utils.LogDebug("FetchDeviceByID Response Body: %s", string(body))
+
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
+		utils.LogError("FetchDeviceByID: API returned status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var deviceResponse entities.TuyaDeviceResponse
 	if err := json.Unmarshal(body, &deviceResponse); err != nil {
+		utils.LogError("FetchDeviceByID: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 

@@ -87,6 +87,7 @@ fun AppNavigation() {
                 else -> {
                     SmartACScreen(
                         deviceId = deviceId,
+                        deviceName = name,
                         token = token,
                         infraredId = if (gatewayId.isNotEmpty()) gatewayId else "a36d8e212f67a0ea2dbgnl", // Use gatewayId if present, else fallback
                         onBack = { navController.popBackStack() }

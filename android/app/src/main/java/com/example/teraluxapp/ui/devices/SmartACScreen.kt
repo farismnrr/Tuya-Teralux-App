@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SmartACScreen(
     deviceId: String,  // This is the remote_id (AC remote paired to IR hub)
+    deviceName: String,
     token: String,
     infraredId: String = "a36d8e212f67a0ea2dbgnl", // Smart IR Hub ID (Corrected: 8 instead of 0)
     onBack: () -> Unit
@@ -51,9 +52,85 @@ fun SmartACScreen(
     val modeLabels = listOf("Cool", "Heat", "Auto", "Fan", "Dry")
     val modeEmojis = listOf("❄️", "🔥", "🔄", "💨", "💧")
     val windLabels = listOf("Auto", "Low", "Medium", "High")
+    
+    var rawStatus by remember { mutableStateOf("Loading...") }
+
+    // Persistent Storage
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { com.example.teraluxapp.utils.DevicePreferences(context) }
+
+    // Fetch initial state
+    LaunchedEffect(Unit) {
+        try {
+            val response = RetrofitClient.instance.getDeviceById(token, deviceId)
+            val statuses = response.device.status
+            
+            // DEBUG: Log all statuses
+            rawStatus = statuses?.joinToString("\n") { "${it.code}: ${it.value}" } ?: "No Status"
+            statuses?.forEach { 
+                android.util.Log.d("SmartACScreen", "Status: ${it.code} = ${it.value}") 
+            }
+            
+            // Check if status is empty (stateless IR)
+            if (statuses.isNullOrEmpty()) {
+                val cached = prefs.getACState(deviceId)
+                isOn = cached.isOn
+                temp = cached.temp
+                modeIndex = cached.mode
+                windIndex = cached.speed
+                android.util.Log.d("SmartACScreen", "Loaded cached state: $cached")
+            } else {
+                statuses.forEach { status ->
+                    val code = status.code.lowercase()
+                    when (code) {
+                        "switch", "power" -> isOn = status.value.toString().toBoolean()
+                        "temp_set", "t", "temp" -> {
+                            val t = status.value.toString().toDoubleOrNull()?.toInt()
+                            if (t != null) temp = t
+                        }
+                        "mode" -> {
+                            val modeStr = status.value.toString().lowercase()
+                            modeIndex = when (modeStr) {
+                                "cool", "cold" -> 0
+                                "heat", "hot" -> 1
+                                "auto" -> 2
+                                "fan", "wind" -> 3
+                                "dry", "wet" -> 4
+                                else -> 0
+                            }
+                        }
+                        "fan_speed_enum", "wind" -> {
+                            val fanStr = status.value.toString().lowercase()
+                            windIndex = when (fanStr) {
+                                "auto" -> 0
+                                "low" -> 1
+                                "medium" -> 2
+                                "high" -> 3
+                                else -> 0
+                            }
+                        }
+                    }
+                }
+                // Save loaded state to cache
+                prefs.saveACState(deviceId, isOn, temp, modeIndex, windIndex)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to cache on error
+            val cached = prefs.getACState(deviceId)
+            isOn = cached.isOn
+            temp = cached.temp
+            modeIndex = cached.mode
+            windIndex = cached.speed
+        }
+    }
 
     // Send IR AC command
+    // Send IR AC command
     val sendIRCommand = { code: String, value: Int ->
+        // Optimistic Save: Save immediately to local storage
+        prefs.saveACState(deviceId, isOn, temp, modeIndex, windIndex)
+
         scope.launch {
             isProcessing = true
             try {
@@ -64,9 +141,7 @@ fun SmartACScreen(
                     value = value
                 )
                 val response = RetrofitClient.instance.sendIRACCommand(token, request)
-                if (!response.isSuccessful) {
-                    // Handle error silently for now
-                }
+                // if (response.isSuccessful) { ... } // Already saved optimistically
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -78,7 +153,7 @@ fun SmartACScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Air", fontWeight = FontWeight.Bold) },
+                title = { Text(deviceName, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -231,7 +306,7 @@ fun SmartACScreen(
                     Text(text = "Switch", fontSize = 18.sp)
                 }
                 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }

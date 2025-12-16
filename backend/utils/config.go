@@ -36,6 +36,9 @@ func LoadConfig() {
 		TuyaBaseURL:      os.Getenv("TUYA_BASE_URL"),
 		TuyaUserID:       os.Getenv("TUYA_USER_ID"),
 	}
+
+	// Refresh log level after loading config
+	UpdateLogLevel()
 }
 
 func findEnvFile() string {
