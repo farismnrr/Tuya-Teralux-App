@@ -23,10 +23,11 @@ help:
 	@echo ""
 
 # Run development server with hot reload (requires air)
+# Run development server with hot reload (requires air)
 dev:
 	@echo "🚀 Starting development server with hot reload..."
 	@echo "💡 Tip: Install air with 'make install-watch' if not installed"
-	@air || (echo "❌ air not found. Installing..." && go install github.com/air-verse/air@latest && air)
+	@$(shell go env GOPATH)/bin/air || (echo "❌ air not found. Installing..." && go install github.com/air-verse/air@latest && $(shell go env GOPATH)/bin/air)
 
 # Run development server without hot reload
 start:

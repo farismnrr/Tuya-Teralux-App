@@ -34,6 +34,7 @@ func main() {
 	tuyaGetAllDevicesController := controllers.NewTuyaGetAllDevicesController(tuyaGetAllDevicesUseCase)
 	tuyaGetDeviceByIDController := controllers.NewTuyaGetDeviceByIDController(tuyaGetDeviceByIDUseCase)
 	tuyaDeviceControlController := controllers.NewTuyaDeviceControlController(tuyaDeviceControlUseCase)
+	tuyaSensorController := controllers.NewTuyaSensorController(tuyaGetDeviceByIDUseCase)
 
 	// Public Routes (Protected by API Key)
 	authGroup := router.Group("/")
@@ -44,7 +45,7 @@ func main() {
 	protected := router.Group("/")
 	protected.Use(middlewares.AuthMiddleware())
 	{
-		routes.SetupTuyaDeviceRoutes(protected, tuyaGetAllDevicesController, tuyaGetDeviceByIDController)
+		routes.SetupTuyaDeviceRoutes(protected, tuyaGetAllDevicesController, tuyaGetDeviceByIDController, tuyaSensorController)
 		routes.SetupTuyaControlRoutes(protected, tuyaDeviceControlController)
 	}
 	// Start server

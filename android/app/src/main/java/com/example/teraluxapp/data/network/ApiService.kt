@@ -4,6 +4,7 @@ import com.example.teraluxapp.data.model.AuthResponse
 import com.example.teraluxapp.data.model.BaseResponse
 import com.example.teraluxapp.data.model.DeviceResponse
 import com.example.teraluxapp.data.model.SingleDeviceResponse
+import com.example.teraluxapp.data.model.SensorDataResponse
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -39,6 +40,12 @@ interface ApiService {
         @Path("id") infraredId: String,
         @Body request: IRACCommandRequest
     ): Response<BaseResponse<CommandResponse>>
+
+    @GET("api/tuya/devices/{id}/sensor")
+    suspend fun getSensorData(
+        @Header("Authorization") token: String,
+        @Path("id") deviceId: String
+    ): Response<BaseResponse<SensorDataResponse>>
 }
 
 

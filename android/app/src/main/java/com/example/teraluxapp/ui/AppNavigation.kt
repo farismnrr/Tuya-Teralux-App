@@ -7,7 +7,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.teraluxapp.ui.devices.SmartACScreen
+import com.example.teraluxapp.ui.devices.SmartACScreen
 import com.example.teraluxapp.ui.devices.SwitchDeviceScreen
+import com.example.teraluxapp.ui.devices.SensorDeviceScreen
 import com.example.teraluxapp.ui.devices.DeviceListScreen
 import com.example.teraluxapp.ui.login.LoginScreen
 import java.net.URLDecoder
@@ -77,6 +79,15 @@ fun AppNavigation() {
                 // Switch/Multi-function categories -> SwitchDeviceScreen
                 category in listOf("dgnzk", "kg", "cz", "pc", "clkg", "cjkg", "tdq", "kgq", "tgkg", "tgq", "dj", "dd") -> {
                     SwitchDeviceScreen(
+                        deviceId = deviceId,
+                        deviceName = name,
+                        token = token,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                // Sensor categories
+                category in listOf("wsdcg") -> {
+                    SensorDeviceScreen(
                         deviceId = deviceId,
                         deviceName = name,
                         token = token,

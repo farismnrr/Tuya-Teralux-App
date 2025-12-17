@@ -51,11 +51,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.environment.set(\"DEVICE_ID_SWITCH\", pm.response.json().data.devices[0].id);",
-							"pm.environment.set(\"DEVICE_ID_IR\", pm.response.json().data.devices[3].id);",
-							"pm.environment.set(\"DEVICE_ID_REMOTE\", pm.response.json().data.devices[1].id);",
+							"pm.environment.set(\"DEVICE_ID_SWITCH\", pm.response.json().data.devices[1].id);",
+							"pm.environment.set(\"DEVICE_ID_IR\", pm.response.json().data.devices[4].id);",
+							"pm.environment.set(\"DEVICE_ID_REMOTE\", pm.response.json().data.devices[2].id);",
+							"pm.environment.set(\"DEVICE_ID_SENSOR\", pm.response.json().data.devices[0].id);",
 							"",
-							"pm.environment.set(\"DEVICE_SWITCH_CONTROL\", pm.response.json().data.devices[0].status[0].code);",
+							"pm.environment.set(\"DEVICE_SWITCH_CONTROL\", pm.response.json().data.devices[1].status[0].code);",
 							""
 						],
 						"type": "text/javascript",
@@ -139,6 +140,55 @@
 						"{{TERALUX_API_VERSION}}",
 						"devices",
 						"{{DEVICE_ID_IR}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Device Temp and Humid",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{ACCESS_TOKEN}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "a3f9c8e2d1b74e0c5a6f8d9e2b1c4a7f0e9d6c3b5a8f1e4d7c9b2a6f0e1d8c7a5b9f4e2d6c8a1f3b0d5e9c7a2f4b6d8e1",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{TERALUX_URL}}/{{TERALUX_API_VERSION}}/devices/{{DEVICE_ID_SENSOR}}/sensor",
+					"host": [
+						"{{TERALUX_URL}}"
+					],
+					"path": [
+						"{{TERALUX_API_VERSION}}",
+						"devices",
+						"{{DEVICE_ID_SENSOR}}",
+						"sensor"
 					]
 				}
 			},
