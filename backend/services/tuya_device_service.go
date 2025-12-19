@@ -154,9 +154,12 @@ func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]strin
 
 // FetchBatchDeviceStatus makes HTTP request to get status of multiple devices
 func (s *TuyaDeviceService) FetchBatchDeviceStatus(url string, headers map[string]string) (*entities.TuyaBatchStatusResponse, error) {
+	utils.LogDebug("FetchBatchDeviceStatus: requesting %s", url)
+	
 	// Create HTTP request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.LogError("FetchBatchDeviceStatus: failed to create request: %v", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -168,6 +171,7 @@ func (s *TuyaDeviceService) FetchBatchDeviceStatus(url string, headers map[strin
 	// Execute request
 	resp, err := s.client.Do(req)
 	if err != nil {
+		utils.LogError("FetchBatchDeviceStatus: failed to execute request: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -175,37 +179,48 @@ func (s *TuyaDeviceService) FetchBatchDeviceStatus(url string, headers map[strin
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		utils.LogError("FetchBatchDeviceStatus: failed to read response: %v", err)
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+	
+	// utils.LogDebug("FetchBatchDeviceStatus Response Body: %s", string(body)) // Optional: can be verbose
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
+		utils.LogError("FetchBatchDeviceStatus: API returned status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var statusResponse entities.TuyaBatchStatusResponse
 	if err := json.Unmarshal(body, &statusResponse); err != nil {
+		utils.LogError("FetchBatchDeviceStatus: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+	
+	utils.LogDebug("FetchBatchDeviceStatus success: fetched status for %d devices", len(statusResponse.Result))
 
 	return &statusResponse, nil
 }
 
 // SendCommand sends commands to a device
 func (s *TuyaDeviceService) SendCommand(url string, headers map[string]string, commands []entities.TuyaCommand) (*entities.TuyaCommandResponse, error) {
+	utils.LogDebug("SendCommand: sending to %s", url)
+
 	// Create request body
 	reqBody := entities.TuyaCommandRequest{
 		Commands: commands,
 	}
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
+		utils.LogError("SendCommand: failed to marshal request body: %v", err)
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
 	// Create HTTP request
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 	if err != nil {
+		utils.LogError("SendCommand: failed to create request: %v", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -218,6 +233,7 @@ func (s *TuyaDeviceService) SendCommand(url string, headers map[string]string, c
 	// Execute request
 	resp, err := s.client.Do(req)
 	if err != nil {
+		utils.LogError("SendCommand: failed to execute request: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -225,28 +241,38 @@ func (s *TuyaDeviceService) SendCommand(url string, headers map[string]string, c
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		utils.LogError("SendCommand: failed to read response: %v", err)
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	utils.LogDebug("SendCommand Response Body: %s", string(body))
+
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
+		utils.LogError("SendCommand: API returned status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var commandResponse entities.TuyaCommandResponse
 	if err := json.Unmarshal(body, &commandResponse); err != nil {
+		utils.LogError("SendCommand: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+	
+	utils.LogDebug("SendCommand success: result=%v", commandResponse.Success)
 
 	return &commandResponse, nil
 }
 
 // SendIRCommand sends a command to an IR device (different request body format)
 func (s *TuyaDeviceService) SendIRCommand(url string, headers map[string]string, jsonBody []byte) (*entities.TuyaCommandResponse, error) {
+	utils.LogDebug("SendIRCommand: sending to %s", url)
+
 	// Create HTTP request
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 	if err != nil {
+		utils.LogError("SendIRCommand: failed to create request: %v", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -259,6 +285,7 @@ func (s *TuyaDeviceService) SendIRCommand(url string, headers map[string]string,
 	// Execute request
 	resp, err := s.client.Do(req)
 	if err != nil {
+		utils.LogError("SendIRCommand: failed to execute request: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -266,28 +293,38 @@ func (s *TuyaDeviceService) SendIRCommand(url string, headers map[string]string,
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		utils.LogError("SendIRCommand: failed to read response: %v", err)
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+	
+	utils.LogDebug("SendIRCommand Response Body: %s", string(body))
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
+		utils.LogError("SendIRCommand: API returned status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var commandResponse entities.TuyaCommandResponse
 	if err := json.Unmarshal(body, &commandResponse); err != nil {
+		utils.LogError("SendIRCommand: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+
+	utils.LogDebug("SendIRCommand success: result=%v", commandResponse.Success)
 
 	return &commandResponse, nil
 }
 
 // FetchDeviceSpecification makes HTTP request to get device specification from Tuya API
 func (s *TuyaDeviceService) FetchDeviceSpecification(url string, headers map[string]string) (*entities.TuyaDeviceSpecificationResponse, error) {
+	utils.LogDebug("FetchDeviceSpecification: requesting %s", url)
+
 	// Create HTTP request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		utils.LogError("FetchDeviceSpecification: failed to create request: %v", err)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -299,6 +336,7 @@ func (s *TuyaDeviceService) FetchDeviceSpecification(url string, headers map[str
 	// Execute request
 	resp, err := s.client.Do(req)
 	if err != nil {
+		utils.LogError("FetchDeviceSpecification: failed to execute request: %v", err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -306,19 +344,24 @@ func (s *TuyaDeviceService) FetchDeviceSpecification(url string, headers map[str
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		utils.LogError("FetchDeviceSpecification: failed to read response: %v", err)
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
+		utils.LogError("FetchDeviceSpecification: API returned status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var specResponse entities.TuyaDeviceSpecificationResponse
 	if err := json.Unmarshal(body, &specResponse); err != nil {
+		utils.LogError("FetchDeviceSpecification: failed to parse response: %v", err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
+	
+	utils.LogDebug("FetchDeviceSpecification success")
 
 	return &specResponse, nil
 }

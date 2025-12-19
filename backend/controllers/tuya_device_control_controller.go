@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"log"
 	"net/http"
 	"teralux_app/dtos"
 	"teralux_app/usecases"
+	"teralux_app/utils"
 
 
 	"github.com/gin-gonic/gin"
@@ -39,9 +39,12 @@ func (ctrl *TuyaDeviceControlController) SendCommand(c *gin.Context) {
 	deviceID := c.Param("id")
 	// Get access token from context (set by middleware)
 	accessToken := c.MustGet("access_token").(string)
+	
+	utils.LogDebug("SendCommand: received request for device %s", deviceID)
 
 	var req dtos.TuyaCommandDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.LogError("Failed to bind command: %v", err)
 		c.JSON(http.StatusBadRequest, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -54,7 +57,7 @@ func (ctrl *TuyaDeviceControlController) SendCommand(c *gin.Context) {
 	commands := []dtos.TuyaCommandDTO{req}
 	success, err := ctrl.useCase.SendCommand(accessToken, deviceID, commands)
 	if err != nil {
-		log.Printf("ERROR: SendCommand failed: %v", err)
+		utils.LogError("SendCommand failed: %v", err)
 		c.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -63,6 +66,7 @@ func (ctrl *TuyaDeviceControlController) SendCommand(c *gin.Context) {
 		return
 	}
 
+	utils.LogDebug("SendCommand success")
 	c.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "Command sent successfully",
@@ -89,7 +93,7 @@ func (ctrl *TuyaDeviceControlController) SendIRACCommand(c *gin.Context) {
 
 	var req dtos.TuyaIRACCommandDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("ERROR: Failed to bind IR AC command: %v", err)
+		utils.LogError("Failed to bind IR AC command: %v", err)
 		c.JSON(http.StatusBadRequest, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -99,10 +103,11 @@ func (ctrl *TuyaDeviceControlController) SendIRACCommand(c *gin.Context) {
 	}
 
 	infraredID := c.Param("id")
+	utils.LogDebug("SendIRACCommand: sending to %s, remoteID: %s, code: %s", infraredID, req.RemoteID, req.Code)
 
 	success, err := ctrl.useCase.SendIRACCommand(accessToken, infraredID, req.RemoteID, req.Code, req.Value)
 	if err != nil {
-		log.Printf("ERROR: SendIRACCommand failed: %v", err)
+		utils.LogError("SendIRACCommand failed: %v", err)
 		c.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -111,6 +116,7 @@ func (ctrl *TuyaDeviceControlController) SendIRACCommand(c *gin.Context) {
 		return
 	}
 
+	utils.LogDebug("SendIRACCommand success")
 	c.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "IR AC Command sent successfully",

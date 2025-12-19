@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"teralux_app/dtos"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,9 +12,11 @@ import (
 // AuthMiddleware handles authentication and header parsing
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		utils.LogDebug("AuthMiddleware: processing request")
 		// 1. Parse Authorization Header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			utils.LogWarn("AuthMiddleware: missing Authorization Header")
 			c.JSON(http.StatusUnauthorized, dtos.StandardResponse{
 				Status:  false,
 				Message: "Authorization header is required",
@@ -30,6 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		} else if len(parts) == 1 {
 			accessToken = parts[0]
 		} else {
+			utils.LogWarn("AuthMiddleware: invalid Authorization Header format")
 			c.JSON(http.StatusUnauthorized, dtos.StandardResponse{
 				Status:  false,
 				Message: "Invalid Authorization header format. Expected 'Bearer <token>'",
@@ -39,6 +43,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set("access_token", accessToken)
+		utils.LogDebug("AuthMiddleware: token parsed successfully")
 
 		// 2. Parse X-TUYA-UID Header (Optional generally, but populated if present)
 		// Controllers that strictly require it should check strictness, 

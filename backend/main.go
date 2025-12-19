@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/url"
 	"teralux_app/controllers"
 	"teralux_app/middlewares"
@@ -48,7 +47,7 @@ func main() {
 	if swaggerURL := utils.AppConfig.SwaggerBaseURL; swaggerURL != "" {
 		parsedURL, err := url.Parse(swaggerURL)
 		if err != nil {
-			log.Printf("Warning: Invalid SWAGGER_BASE_URL: %v", err)
+			utils.LogInfo("Warning: Invalid SWAGGER_BASE_URL: %v", err)
 		} else {
 			docs.SwaggerInfo.Host = parsedURL.Host
 			docs.SwaggerInfo.Schemes = []string{parsedURL.Scheme}
@@ -78,12 +77,13 @@ func main() {
 	tuyaGetAllDevicesUseCase := usecases.NewTuyaGetAllDevicesUseCase(tuyaDeviceService)
 	tuyaGetDeviceByIDUseCase := usecases.NewTuyaGetDeviceByIDUseCase(tuyaDeviceService)
 	tuyaDeviceControlUseCase := usecases.NewTuyaDeviceControlUseCase(tuyaDeviceService)
+	tuyaSensorUseCase := usecases.NewTuyaSensorUseCase(tuyaGetDeviceByIDUseCase)
 
 	tuyaAuthController := controllers.NewTuyaAuthController(tuyaAuthUseCase)
 	tuyaGetAllDevicesController := controllers.NewTuyaGetAllDevicesController(tuyaGetAllDevicesUseCase)
 	tuyaGetDeviceByIDController := controllers.NewTuyaGetDeviceByIDController(tuyaGetDeviceByIDUseCase)
 	tuyaDeviceControlController := controllers.NewTuyaDeviceControlController(tuyaDeviceControlUseCase)
-	tuyaSensorController := controllers.NewTuyaSensorController(tuyaGetDeviceByIDUseCase)
+	tuyaSensorController := controllers.NewTuyaSensorController(tuyaSensorUseCase)
 
 	// Public Routes (Protected by API Key)
 	authGroup := router.Group("/")
@@ -99,8 +99,8 @@ func main() {
 		routes.SetupTuyaControlRoutes(protected, tuyaDeviceControlController)
 	}
 	// Start server
-	log.Println("Server starting on :8080")
+	utils.LogInfo("Server starting on :8080")
 	if err := router.Run(":8080"); err != nil {
-		log.Fatal("Failed to start server:", err)
+		utils.LogInfo("Failed to start server: %v", err)
 	}
 }

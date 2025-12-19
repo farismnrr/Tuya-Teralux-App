@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"teralux_app/dtos"
 	"teralux_app/usecases"
-
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,9 +48,12 @@ func (c *TuyaGetDeviceByIDController) GetDeviceByID(ctx *gin.Context) {
 	// Get access token from context (set by middleware)
 	accessToken := ctx.MustGet("access_token").(string)
 
+	utils.LogDebug("GetDeviceByID: requesting device %s", deviceID)
+
 	// Call use case
 	device, err := c.useCase.GetDeviceByID(accessToken, deviceID)
 	if err != nil {
+		utils.LogError("GetDeviceByID failed: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -60,6 +63,7 @@ func (c *TuyaGetDeviceByIDController) GetDeviceByID(ctx *gin.Context) {
 	}
 
 	// Return success response
+	utils.LogDebug("GetDeviceByID success")
 	ctx.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "Device fetched successfully",

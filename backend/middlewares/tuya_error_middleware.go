@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"teralux_app/dtos"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,6 +33,7 @@ func TuyaErrorMiddleware() gin.HandlerFunc {
 
 		responseBody := w.body.String()
 		if strings.Contains(responseBody, "code: 1010") {
+			utils.LogWarn("TuyaErrorMiddleware: Detected code 1010 (token invalid). Replacing response with 401.")
 			// Replace with standardized 401 response
 			newResponse := dtos.StandardResponse{
 				Status:  false,

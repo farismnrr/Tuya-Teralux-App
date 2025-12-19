@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"teralux_app/dtos"
@@ -93,9 +92,9 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dto
 
 	// DEBUG: Log device attributes and SPECIFICATIONS to find correct command values
 	for _, dev := range devicesResponse.Result {
-		log.Printf("DEVICE DEBUG: ID=%s, Name=%s, Category=%s", dev.ID, dev.Name, dev.Category)
+		utils.LogDebug("DEVICE DEBUG: ID=%s, Name=%s, Category=%s", dev.ID, dev.Name, dev.Category)
 		for _, st := range dev.Status {
-			log.Printf("   STATUS: Code=%s, Value=%v (Type: %T)", st.Code, st.Value, st.Value)
+			utils.LogDebug("   STATUS: Code=%s, Value=%v (Type: %T)", st.Code, st.Value, st.Value)
 		}
 
 		// Fetch and Log Specifications
@@ -121,12 +120,12 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dto
 
 		specResp, errSpec := uc.service.FetchDeviceSpecification(specFullURL, specHeaders)
 		if errSpec == nil && specResp.Success {
-			log.Printf("   SPECIFICATION for ID=%s:", dev.ID)
+			utils.LogDebug("   SPECIFICATION for ID=%s:", dev.ID)
 			for _, fn := range specResp.Result.Functions {
-				log.Printf("      FUNCTION: Code=%s, Type=%s, Values=%s", fn.Code, fn.Type, fn.Values)
+				utils.LogDebug("      FUNCTION: Code=%s, Type=%s, Values=%s", fn.Code, fn.Type, fn.Values)
 			}
 		} else {
-			log.Printf("   FAILED to fetch spec for ID=%s: %v", dev.ID, errSpec)
+			utils.LogError("   FAILED to fetch spec for ID=%s: %v", dev.ID, errSpec)
 		}
 	}
 
@@ -169,7 +168,7 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dto
 				statusMap[s.ID] = s.IsOnline
 			}
 		} else {
-			log.Printf("WARN: Failed to fetch batch status: %v", err)
+			utils.LogWarn("WARN: Failed to fetch batch status: %v", err)
 		}
 	}
 

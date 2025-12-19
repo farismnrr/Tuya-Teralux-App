@@ -58,6 +58,8 @@ func (uc *TuyaGetDeviceByIDUseCase) GetDeviceByID(accessToken, deviceID string) 
 	// Generate string to sign
 	stringToSign := utils.GenerateTuyaStringToSign("GET", contentHash, "", urlPath)
 
+	utils.LogDebug("GetDeviceByID: generating signature for device=%s", deviceID)
+
 	// Generate signature
 	signature := utils.GenerateTuyaSignature(config.TuyaClientID, config.TuyaClientSecret, accessToken, timestamp, stringToSign)
 

@@ -69,7 +69,7 @@ func (s *TuyaAuthService) FetchToken(url string, headers map[string]string) (*en
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	utils.LogDebug("FetchToken success")
+	utils.LogDebug("FetchToken success: token received, expires in %d seconds", authResponse.Result.ExpireTime)
 
 	return &authResponse, nil
 }

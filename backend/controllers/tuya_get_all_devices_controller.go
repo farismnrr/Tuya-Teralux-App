@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"log"
 	"net/http"
 	"teralux_app/dtos"
 	"teralux_app/usecases"
@@ -39,7 +38,7 @@ func (c *TuyaGetAllDevicesController) GetAllDevices(ctx *gin.Context) {
 	// Use Tuya User ID from environment/config
 	uid := utils.AppConfig.TuyaUserID
 	if uid == "" {
-		log.Println("ERROR: TUYA_USER_ID is not set in environment")
+		utils.LogError("TUYA_USER_ID is not set in environment")
 		ctx.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: "Server configuration error: TUYA_USER_ID missing",
@@ -47,11 +46,11 @@ func (c *TuyaGetAllDevicesController) GetAllDevices(ctx *gin.Context) {
 		})
 		return
 	}
-	log.Printf("DEBUG: Using TUYA_USER_ID from env: '%s'", uid)
+	utils.LogDebug("Using TUYA_USER_ID from env: '%s'", uid)
 
 	devices, err := c.useCase.GetAllDevices(accessToken, uid)
 	if err != nil {
-		log.Printf("Error fetching devices: %v", err)
+		utils.LogError("Error fetching devices: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),

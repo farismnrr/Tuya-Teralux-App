@@ -2,12 +2,14 @@ package routes
 
 import (
 	"teralux_app/controllers"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupTuyaAuthRoutes registers Tuya authentication routes
 func SetupTuyaAuthRoutes(router *gin.RouterGroup, controller *controllers.TuyaAuthController) {
+	utils.LogDebug("SetupTuyaAuthRoutes initialized")
 	api := router.Group("/api/tuya")
 	{
 		// Authenticate with Tuya

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"teralux_app/controllers"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,7 @@ func SetupTuyaDeviceRoutes(
 	getDeviceByIDController *controllers.TuyaGetDeviceByIDController,
 	sensorController *controllers.TuyaSensorController,
 ) {
+	utils.LogDebug("SetupTuyaDeviceRoutes initialized")
 	// Group: /api/tuya
 	api := router.Group("/api/tuya")
 	{

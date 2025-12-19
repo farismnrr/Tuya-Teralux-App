@@ -69,6 +69,8 @@ func (uc *TuyaAuthUseCase) Authenticate() (*dtos.TuyaAuthResponseDTO, error) {
 
 	// Generate string to sign
 	stringToSign := utils.GenerateTuyaStringToSign("GET", contentHash, "", urlPath)
+	
+	utils.LogDebug("Authenticate: generating signature for clientId=%s", config.TuyaClientID)
 
 	// Generate signature
 	signature := utils.GenerateTuyaSignature(config.TuyaClientID, config.TuyaClientSecret, "", timestamp, stringToSign)

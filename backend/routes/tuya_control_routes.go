@@ -2,12 +2,14 @@ package routes
 
 import (
 	"teralux_app/controllers"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupTuyaControlRoutes registers Tuya device control routes
 func SetupTuyaControlRoutes(router gin.IRouter, controller *controllers.TuyaDeviceControlController) {
+	utils.LogDebug("SetupTuyaControlRoutes initialized")
 	api := router.Group("/api/tuya")
 	{
 		// Send commands to device (Switch/Light/etc)

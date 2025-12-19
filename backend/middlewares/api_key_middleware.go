@@ -17,6 +17,7 @@ func ApiKeyMiddleware() gin.HandlerFunc {
 		validApiKey := config.ApiKey
 
 		if validApiKey == "" {
+			utils.LogError("ApiKeyMiddleware: API_KEY is not set in server config!")
 			// If API_KEY is not configured on server, we might want to fail open or closed.
 			// Falsing closed (500) is safer to alert admin.
 			c.JSON(http.StatusInternalServerError, dtos.StandardResponse{
@@ -29,6 +30,7 @@ func ApiKeyMiddleware() gin.HandlerFunc {
 		}
 
 		if apiKey != validApiKey {
+			utils.LogWarn("ApiKeyMiddleware: Invalid API Key provided")
 			c.JSON(http.StatusUnauthorized, dtos.StandardResponse{
 				Status:  false,
 				Message: "Invalid API Key",
@@ -37,6 +39,8 @@ func ApiKeyMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		
+		utils.LogDebug("ApiKeyMiddleware: Valid API Key")
 
 		c.Next()
 	}

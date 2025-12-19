@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"teralux_app/dtos"
 	"teralux_app/entities"
@@ -91,15 +90,15 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 	}
 
 	// Call FetchDeviceByID
-	log.Printf("DEBUG SendIRACCommand: Fetching device details for RemoteID=%s", remoteID)
+	utils.LogDebug("SendIRACCommand: Fetching device details for RemoteID=%s", remoteID)
 	deviceResp, err := uc.service.FetchDeviceByID(deviceFullURL, deviceHeaders)
 	if err != nil {
-		log.Printf("WARNING: Failed to fetch device details for IR command: %v. Continuing with provided infraredID.", err)
+		utils.LogError("WARNING: Failed to fetch device details for IR command: %v. Continuing with provided infraredID.", err)
 	} else if deviceResp.Success && deviceResp.Result.GatewayID != "" {
-		log.Printf("DEBUG SendIRACCommand: Found GatewayID=%s for device %s. Using it as InfraredID.", deviceResp.Result.GatewayID, remoteID)
+		utils.LogDebug("SendIRACCommand: Found GatewayID=%s for device %s. Using it as InfraredID.", deviceResp.Result.GatewayID, remoteID)
 		infraredID = deviceResp.Result.GatewayID
 	} else {
-		log.Printf("DEBUG SendIRACCommand: No GatewayID found in device details. Using provided infraredID=%s", infraredID)
+		utils.LogDebug("SendIRACCommand: No GatewayID found in device details. Using provided infraredID=%s", infraredID)
 	}
 
 	// 2. Send IR Command
@@ -139,17 +138,17 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 	}
 
 	// Call service
-	log.Printf("DEBUG SendIRACCommand: InfraredID=%s, RemoteID=%s, Code=%s, Value=%d, URL=%s, Body=%s", infraredID, remoteID, code, value, fullURL, string(jsonBody))
+	utils.LogDebug("SendIRACCommand: InfraredID=%s, RemoteID=%s, Code=%s, Value=%d, URL=%s, Body=%s", infraredID, remoteID, code, value, fullURL, string(jsonBody))
 	resp, err := uc.service.SendIRCommand(fullURL, headers, jsonBody)
 	if err != nil {
 		return false, err
 	}
 
 	if !resp.Success {
-		log.Printf("ERROR: Tuya IR API Command Failed. Code: %d, Msg: %s", resp.Code, resp.Msg)
+		utils.LogError("Tuya IR API Command Failed. Code: %d, Msg: %s", resp.Code, resp.Msg)
 		
 		if resp.Code == 30100 {
-			log.Printf("WARNING: Tuya IR API 30100 detected. Attempting fallback to Standard Device Control for device %s...", infraredID)
+			utils.LogWarn("Tuya IR API 30100 detected. Attempting fallback to Standard Device Control for device %s...", infraredID)
 			
 			// Map IR command to Standard DP
 			var fallbackCode string
@@ -179,7 +178,7 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 				fallbackCode = code
 			}
 
-			log.Printf("DEBUG: Fallback mapping: %s -> %s, %v -> %v", code, fallbackCode, value, fallbackValue)
+			utils.LogDebug("Fallback mapping: %s -> %s, %v -> %v", code, fallbackCode, value, fallbackValue)
 
 			// Construct Standard Command Entity (not DTO, need Entity for service)
 			fallbackCommands := []entities.TuyaCommand{
@@ -217,14 +216,14 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 				"access_token": accessToken,
 			}
 			
-			log.Printf("DEBUG: Fallback Legacy Call: DeviceID=%s, URL=%s, Body=%s", remoteID, fallbackFullURL, string(fallbackJsonBody))
+			utils.LogDebug("Fallback Legacy Call: DeviceID=%s, URL=%s, Body=%s", remoteID, fallbackFullURL, string(fallbackJsonBody))
 			fallbackResp, fallbackErr := uc.service.SendCommand(fallbackFullURL, fallbackHeaders, fallbackCommands)
 			if fallbackErr != nil {
 				return false, fallbackErr
 			}
 			
 			if !fallbackResp.Success {
-				log.Printf("ERROR: Fallback Legacy API Failed. Code: %d, Msg: %s", fallbackResp.Code, fallbackResp.Msg)
+				utils.LogError("Fallback Legacy API Failed. Code: %d, Msg: %s", fallbackResp.Code, fallbackResp.Msg)
 				return false, fmt.Errorf("tuya Legacy API failed: %s (code: %d)", fallbackResp.Msg, fallbackResp.Code)
 			}
 			
@@ -304,14 +303,14 @@ func (uc *TuyaDeviceControlUseCase) SendCommand(accessToken, deviceID string, co
 	}
 
 	// Call service
-	log.Printf("DEBUG SendCommand: DeviceID=%s, URL=%s, Body=%s", deviceID, fullURL, string(jsonBody))
+	utils.LogDebug("SendCommand: DeviceID=%s, URL=%s, Body=%s", deviceID, fullURL, string(jsonBody))
 	resp, err := uc.service.SendCommand(fullURL, headers, entityCommands)
 	if err != nil {
 		return false, err
 	}
 
 	if !resp.Success {
-		log.Printf("ERROR: Tuya API Command Failed. Code: %d, Msg: %s", resp.Code, resp.Msg)
+		utils.LogError("Tuya API Command Failed. Code: %d, Msg: %s", resp.Code, resp.Msg)
 
 		// RETRY LOGIC for "switch_" mismatch (switch_1 -> switch1)
 		if resp.Code == 2008 {
@@ -330,7 +329,7 @@ func (uc *TuyaDeviceControlUseCase) SendCommand(accessToken, deviceID string, co
 			}
 
 			if shouldRetry {
-				log.Printf("DEBUG: Retrying with corrected commands: %+v", retryCommands)
+				utils.LogDebug("Retrying with corrected commands: %+v", retryCommands)
 				
 				// Use LEGACY endpoint for DP instructions (v1.0/devices/{id}/commands) instead of iot-03
 				// This is crucial because iot-03 endpoint validates against Standard Instruction Set (which is empty here).
@@ -362,12 +361,12 @@ func (uc *TuyaDeviceControlUseCase) SendCommand(accessToken, deviceID string, co
 				// Retry call
 				retryResp, retryErr := uc.service.SendCommand(retryFullURL, retryHeaders, retryCommands)
 				if retryErr == nil && retryResp.Success {
-					log.Printf("INFO: Retry success with corrected commands!")
+					utils.LogInfo("Retry success with corrected commands!")
 					return retryResp.Result, nil
 				} else if retryErr != nil {
-					log.Printf("ERROR: Retry failed: %v", retryErr)
+					utils.LogError("Retry failed: %v", retryErr)
 				} else {
-					log.Printf("ERROR: Retry API failed: %d %s", retryResp.Code, retryResp.Msg)
+					utils.LogError("Retry API failed: %d %s", retryResp.Code, retryResp.Msg)
 				}
 			}
 		}

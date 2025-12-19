@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"teralux_app/dtos"
 	"teralux_app/usecases"
+	"teralux_app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,9 +32,11 @@ func NewTuyaAuthController(useCase *usecases.TuyaAuthUseCase) *TuyaAuthControlle
 // @Security     ApiKeyAuth
 // @Router       /api/tuya/auth [get]
 func (c *TuyaAuthController) Authenticate(ctx *gin.Context) {
+	utils.LogDebug("Authenticate request received")
 	// Call use case
 	token, err := c.useCase.Authenticate()																																																																									
 	if err != nil {
+		utils.LogError("Authenticate failed: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dtos.StandardResponse{
 			Status:  false,
 			Message: err.Error(),
@@ -43,6 +46,7 @@ func (c *TuyaAuthController) Authenticate(ctx *gin.Context) {
 	}
 
 	// Return success response
+	utils.LogDebug("Authentication successful")
 	ctx.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "Authentication successful",
