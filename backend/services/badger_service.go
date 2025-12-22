@@ -16,9 +16,9 @@ type BadgerService struct {
 
 // NewBadgerService initializes a new BadgerService instance.
 //
-// @param dbPath rule="required" The file system path where the database directory will be created or opened.
-// @return *BadgerService A pointer to the initialized service instance ready for use.
-// @return error An error if the database cannot be opened (e.g., permissions, locked).
+// param dbPath rule="required" The file system path where the database directory will be created or opened.
+// return *BadgerService A pointer to the initialized service instance ready for use.
+// return error An error if the database cannot be opened (e.g., permissions, locked).
 // @throws error If BadgerDB fails to open the database file.
 func NewBadgerService(dbPath string) (*BadgerService, error) {
 	opts := badger.DefaultOptions(dbPath)
@@ -35,7 +35,7 @@ func NewBadgerService(dbPath string) (*BadgerService, error) {
 // Close terminates the database connection and ensures all data is flushed to disk.
 // This method should be called ensuring graceful shutdown of the application.
 //
-// @return error An error if the closing process encounters any issue.
+// return error An error if the closing process encounters any issue.
 func (s *BadgerService) Close() error {
 	if s.db != nil {
 		return s.db.Close()
@@ -45,10 +45,10 @@ func (s *BadgerService) Close() error {
 
 // Set stores a key-value pair in the database with a specified Time-To-Live (TTL).
 //
-// @param key The unique identifier for the data.
-// @param value The byte array data to store.
-// @param ttl The duration after which the key should expire.
-// @return error An error if the write operation fails.
+// param key The unique identifier for the data.
+// param value The byte array data to store.
+// param ttl The duration after which the key should expire.
+// return error An error if the write operation fails.
 // @throws error If the transaction fails to commit.
 func (s *BadgerService) Set(key string, value []byte, ttl time.Duration) error {
 	err := s.db.Update(func(txn *badger.Txn) error {
@@ -65,9 +65,9 @@ func (s *BadgerService) Set(key string, value []byte, ttl time.Duration) error {
 // Get retrieves a value associated with the given key.
 // It handles the transaction view automatically.
 //
-// @param key The unique identifier to search for.
-// @return []byte The value stored under the key, or nil if the key does not exist.
-// @return error An error if the read operation fails (excluding KeyNotFound).
+// param key The unique identifier to search for.
+// return []byte The value stored under the key, or nil if the key does not exist.
+// return error An error if the read operation fails (excluding KeyNotFound).
 // @throws error if an internal database error occurs during the view transaction.
 func (s *BadgerService) Get(key string) ([]byte, error) {
 	var valCopy []byte
@@ -93,8 +93,8 @@ func (s *BadgerService) Get(key string) ([]byte, error) {
 
 // Delete removes a key and its associated value from the database.
 //
-// @param key The unique identifier to remove.
-// @return error An error if the delete operation fails.
+// param key The unique identifier to remove.
+// return error An error if the delete operation fails.
 // @throws error If the transaction fails to commit.
 func (s *BadgerService) Delete(key string) error {
 	err := s.db.Update(func(txn *badger.Txn) error {
@@ -110,8 +110,8 @@ func (s *BadgerService) Delete(key string) error {
 // ClearWithPrefix removes all keys that start with the specified prefix.
 // This is useful for clearing a group of related cache items.
 //
-// @param prefix The string pattern to match at the beginning of keys.
-// @return error An error if the bulk drop operation fails.
+// param prefix The string pattern to match at the beginning of keys.
+// return error An error if the bulk drop operation fails.
 func (s *BadgerService) ClearWithPrefix(prefix string) error {
 	return s.db.DropPrefix([]byte(prefix))
 }
@@ -119,7 +119,7 @@ func (s *BadgerService) ClearWithPrefix(prefix string) error {
 // FlushAll removes all data from the database.
 // WARNING: This action is irreversible.
 //
-// @return error An error if the drop all operation fails.
+// return error An error if the drop all operation fails.
 func (s *BadgerService) FlushAll() error {
 	return s.db.DropAll()
 }

@@ -23,7 +23,6 @@ help:
 	@echo ""
 
 # Run development server with hot reload (requires air)
-# Run development server with hot reload (requires air)
 dev:
 	@echo "🚀 Starting development server with hot reload..."
 	@echo "💡 Tip: Install air with 'make install-watch' if not installed"

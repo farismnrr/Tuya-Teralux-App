@@ -19,8 +19,8 @@ type TuyaAuthUseCase struct {
 
 // NewTuyaAuthUseCase creates a new instance of TuyaAuthUseCase.
 //
-// @param service The TuyaAuthService used to perform the actual HTTP requests.
-// @return *TuyaAuthUseCase A pointer to the initialized usecase.
+// param service The TuyaAuthService used to perform the actual HTTP requests.
+// return *TuyaAuthUseCase A pointer to the initialized usecase.
 func NewTuyaAuthUseCase(service *services.TuyaAuthService) *TuyaAuthUseCase {
 	return &TuyaAuthUseCase{
 		service: service,
@@ -38,8 +38,8 @@ func NewTuyaAuthUseCase(service *services.TuyaAuthService) *TuyaAuthUseCase {
 //   GET\n{content_hash}\n\n{url}
 //   (content_hash is SHA256 of empty string for GET)
 //
-// @return *dtos.TuyaAuthResponseDTO The data transfer object containing the access token, refresh token, and expiration time.
-// @return error An error if configuration is missing, signature generation fails, or the API call returns an error.
+// return *dtos.TuyaAuthResponseDTO The data transfer object containing the access token, refresh token, and expiration time.
+// return error An error if configuration is missing, signature generation fails, or the API call returns an error.
 // @throws error if the API returns a non-success status code (e.g., invalid client ID).
 func (uc *TuyaAuthUseCase) Authenticate() (*dtos.TuyaAuthResponseDTO, error) {
 	// Get config

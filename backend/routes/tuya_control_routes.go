@@ -10,8 +10,8 @@ import (
 // SetupTuyaControlRoutes registers endpoints for controlling Tuya devices.
 // These routes handle standard device commands (e.g., switches) and specialized IR commands.
 //
-// @param router The Gin router interface.
-// @param controller The controller responsible for handling device control requests.
+// param router The Gin router interface.
+// param controller The controller responsible for handling device control requests.
 func SetupTuyaControlRoutes(router gin.IRouter, controller *controllers.TuyaDeviceControlController) {
 	utils.LogDebug("SetupTuyaControlRoutes initialized")
 	api := router.Group("/api/tuya")

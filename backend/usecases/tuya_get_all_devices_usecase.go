@@ -20,8 +20,8 @@ type TuyaGetAllDevicesUseCase struct {
 
 // NewTuyaGetAllDevicesUseCase initializes a new TuyaGetAllDevicesUseCase.
 //
-// @param service The TuyaDeviceService used for API interactions.
-// @return *TuyaGetAllDevicesUseCase A pointer to the initialized usecase.
+// param service The TuyaDeviceService used for API interactions.
+// return *TuyaGetAllDevicesUseCase A pointer to the initialized usecase.
 func NewTuyaGetAllDevicesUseCase(service *services.TuyaDeviceService) *TuyaGetAllDevicesUseCase {
 	return &TuyaGetAllDevicesUseCase{
 		service: service,
@@ -37,10 +37,10 @@ func NewTuyaGetAllDevicesUseCase(service *services.TuyaDeviceService) *TuyaGetAl
 // 2. Get Device Specifications: GET /v1.0/iot-03/devices/{device_id}/specification
 // 3. Batch Get Device Status: GET /v1.0/iot-03/devices/status
 //
-// @param accessToken The valid OAuth 2.0 access token.
-// @param uid The Tuya User ID for whom to fetch devices.
-// @return *dtos.TuyaDevicesResponseDTO The aggregated list of devices.
-// @return error An error if fetching the device list fails.
+// param accessToken The valid OAuth 2.0 access token.
+// param uid The Tuya User ID for whom to fetch devices.
+// return *dtos.TuyaDevicesResponseDTO The aggregated list of devices.
+// return error An error if fetching the device list fails.
 // @throws error If the API returns a failure (e.g., invalid token).
 func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dtos.TuyaDevicesResponseDTO, error) {
 	// Get config
@@ -201,72 +201,184 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string) (*dto
 		})
 	}
 
-	// Group "infrared_ac" devices into "wnykq" (Smart IR) devices
-	if config.GetAllDevicesResponseType == "0" {
-		var finalDevices []dtos.TuyaDeviceDTO
-		var irDevices []dtos.TuyaDeviceDTO
-		var smartIRIndices []int
-
-		// 1. Separate IR AC devices and identify Smart IR hubs
-		for _, d := range deviceDTOs {
-			if d.Category == "infrared_ac" {
-				irDevices = append(irDevices, d)
-			} else {
-				finalDevices = append(finalDevices, d)
-			}
-		}
-
-		// 2. Find Smart IR hubs in the final list
-		for i, d := range finalDevices {
-			if d.Category == "wnykq" {
-				smartIRIndices = append(smartIRIndices, i)
-			}
-		}
-
-		// 3. Assign IR devices to hubs
-		if len(smartIRIndices) > 0 && len(irDevices) > 0 {
-			// Map Hub ID to Index for direct access
-			hubMap := make(map[string]int)
-			for _, idx := range smartIRIndices {
-				hubMap[finalDevices[idx].ID] = idx
-			}
-
-			var orphanIRs []dtos.TuyaDeviceDTO
-
-			for _, ir := range irDevices {
-				if targetIdx, ok := hubMap[ir.GatewayID]; ok {
-					// Match found by GatewayID
-					finalDevices[targetIdx].Collections = append(finalDevices[targetIdx].Collections, ir)
-				} else if ir.GatewayID == "" {
-					// No GatewayID? Fallback: Add to the FIRST Smart IR hub
-					firstHubIdx := smartIRIndices[0]
-					finalDevices[firstHubIdx].Collections = append(finalDevices[firstHubIdx].Collections, ir)
-				} else {
-					// Has GatewayID but parent not found in list -> Keep as orphan
-					orphanIRs = append(orphanIRs, ir)
-				}
-			}
-
-			// Add orphans back to main list
-			if len(orphanIRs) > 0 {
-				finalDevices = append(finalDevices, orphanIRs...)
-			}
-		} else {
-			// No Hubs found or no IR devices? Keep original list (including un-nested IR devices if no hub)
-			finalDevices = append(finalDevices, irDevices...)
-		}
-
-		// Update the main list with the grouped result
-		deviceDTOs = finalDevices
+	// Process devices based on response type configuration
+	switch config.GetAllDevicesResponseType {
+	case "0":
+		deviceDTOs = uc.processResponseMode0(deviceDTOs)
+	case "1":
+		deviceDTOs = uc.processResponseMode1(deviceDTOs)
+	case "2":
+		deviceDTOs = uc.processResponseMode2(deviceDTOs)
+	default:
+		// Default to Mode 0
+		deviceDTOs = uc.processResponseMode0(deviceDTOs)
 	}
 
-	// Sort devices by CreateTime Ascending (Oldest first)
+	// Sort devices by Name Ascending (Alphabetical)
 	sort.Slice(deviceDTOs, func(i, j int) bool {
-		return deviceDTOs[i].CreateTime < deviceDTOs[j].CreateTime
+		return deviceDTOs[i].Name < deviceDTOs[j].Name
 	})
 
 	return &dtos.TuyaDevicesResponseDTO{
 		Devices: deviceDTOs,
 		Total:   len(deviceDTOs),
 	}, nil
+}
+
+// processResponseMode0 handles nesting IR devices inside Smart IR Hubs
+func (uc *TuyaGetAllDevicesUseCase) processResponseMode0(deviceDTOs []dtos.TuyaDeviceDTO) []dtos.TuyaDeviceDTO {
+	var finalDevices []dtos.TuyaDeviceDTO
+	var irDevices []dtos.TuyaDeviceDTO
+	var smartIRIndices []int
+
+	// 1. Separate IR AC devices and identify Smart IR hubs
+	for _, d := range deviceDTOs {
+		if d.Category == "infrared_ac" {
+			irDevices = append(irDevices, d)
+			continue
+		}
+		finalDevices = append(finalDevices, d)
+	}
+
+	// 2. Find Smart IR hubs in the final list
+	for i, d := range finalDevices {
+		if d.Category == "wnykq" {
+			smartIRIndices = append(smartIRIndices, i)
+		}
+	}
+
+	// 3. Assign IR devices to hubs
+	// If no hubs or no IR devices, just return the combined list
+	if len(smartIRIndices) == 0 || len(irDevices) == 0 {
+		finalDevices = append(finalDevices, irDevices...)
+		return finalDevices
+	}
+
+	// Map Hub ID and LocalKey to Index for direct access
+	hubIDMap := make(map[string]int)
+	hubLocalKeyMap := make(map[string]int)
+
+	for _, idx := range smartIRIndices {
+		hub := finalDevices[idx]
+		hubIDMap[hub.ID] = idx
+		if hub.LocalKey != "" {
+			hubLocalKeyMap[hub.LocalKey] = idx
+		}
+	}
+
+	var orphanIRs []dtos.TuyaDeviceDTO
+
+	for _, ir := range irDevices {
+		// Strategy 1: Match by GatewayID (Official method)
+		if targetIdx, ok := hubIDMap[ir.GatewayID]; ok {
+			finalDevices[targetIdx].Collections = append(finalDevices[targetIdx].Collections, ir)
+			continue
+		}
+
+		// Strategy 2: Match by LocalKey (Fallback method for some devices)
+		if targetIdx, ok := hubLocalKeyMap[ir.LocalKey]; ok {
+			finalDevices[targetIdx].Collections = append(finalDevices[targetIdx].Collections, ir)
+			continue
+		}
+
+		// Strategy 3: Orphan (No parent found)
+		orphanIRs = append(orphanIRs, ir)
+	}
+
+	// Add orphans back to main list
+	if len(orphanIRs) > 0 {
+		finalDevices = append(finalDevices, orphanIRs...)
+	}
+
+	return finalDevices
+}
+
+// processResponseMode1 handles the flat list response (Mode 1)
+func (uc *TuyaGetAllDevicesUseCase) processResponseMode1(deviceDTOs []dtos.TuyaDeviceDTO) []dtos.TuyaDeviceDTO {
+	// Mode 1 is the flat list response.
+	// No additional processing is needed as the devices are already in a flat list.
+	return deviceDTOs
+}
+
+// processResponseMode2 handles merging IR devices with their hubs in a flat list
+func (uc *TuyaGetAllDevicesUseCase) processResponseMode2(deviceDTOs []dtos.TuyaDeviceDTO) []dtos.TuyaDeviceDTO {
+	// 1. Identify Hubs and Remotes
+	hubMap := make(map[string]dtos.TuyaDeviceDTO)         // HubID -> HubDTO
+	hubLocalKeyMap := make(map[string]dtos.TuyaDeviceDTO) // LocalKey -> HubDTO
+
+	var irRemotes []dtos.TuyaDeviceDTO
+	var otherDevices []dtos.TuyaDeviceDTO
+
+	// First pass: Index Hubs and separate Remotes
+	for _, d := range deviceDTOs {
+		if d.Category == "wnykq" {
+			hubMap[d.ID] = d
+			if d.LocalKey != "" {
+				hubLocalKeyMap[d.LocalKey] = d
+			}
+		}
+	}
+
+	// Second pass: Categorize into Remotes and Others
+	for _, d := range deviceDTOs {
+		if d.Category == "infrared_ac" {
+			irRemotes = append(irRemotes, d)
+			continue
+		}
+		// Process others
+		otherDevices = append(otherDevices, d)
+	}
+
+	var finalDevices []dtos.TuyaDeviceDTO
+	usedHubIDs := make(map[string]bool)
+
+	// Process IR Remotes -> Create Merged Entries
+	for _, remote := range irRemotes {
+		var parentHub dtos.TuyaDeviceDTO
+		found := false
+
+		// Try to find parent hub
+		if hub, ok := hubMap[remote.GatewayID]; ok {
+			parentHub = hub
+			found = true
+		}
+		
+		if !found {
+			// Check local key if not found by GatewayID
+			if hub, ok := hubLocalKeyMap[remote.LocalKey]; ok {
+				parentHub = hub
+				found = true
+			}
+		}
+
+		if !found {
+			// Orphan Remote? Just add it as is
+			finalDevices = append(finalDevices, remote)
+			continue
+		}
+
+		mergedDevice := parentHub
+		mergedDevice.RemoteID = remote.ID
+		mergedDevice.RemoteName = remote.Name
+		mergedDevice.RemoteCategory = remote.Category
+		mergedDevice.RemoteProductName = remote.ProductName
+		mergedDevice.RemoteIcon = remote.Icon
+		mergedDevice.CreateTime = remote.CreateTime
+		mergedDevice.UpdateTime = remote.UpdateTime
+
+		finalDevices = append(finalDevices, mergedDevice)
+		usedHubIDs[parentHub.ID] = true
+	}
+
+	// Add non-remote devices
+	for _, d := range otherDevices {
+		if d.Category == "wnykq" {
+			if _, used := usedHubIDs[d.ID]; used {
+				continue // Skip this hub, it's represented by its children
+			}
+		}
+		finalDevices = append(finalDevices, d)
+	}
+
+	return finalDevices
 }

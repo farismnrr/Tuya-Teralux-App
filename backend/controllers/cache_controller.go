@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"teralux_app/dtos"
 	"teralux_app/services"
 	"teralux_app/utils"
 
@@ -25,14 +26,15 @@ func NewCacheController(cache *services.BadgerService) *CacheController {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} dtos.StandardResponse
+// @Failure 500 {object} dtos.StandardResponse
 // @Router /api/cache/flush [delete]
 func (ctrl *CacheController) FlushCache(c *gin.Context) {
 	if ctrl.cache == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"msg":     "Cache service not initialized",
+		c.JSON(http.StatusInternalServerError, dtos.StandardResponse{
+			Status:  false,
+			Message: "Cache service not initialized",
+			Data:    nil,
 		})
 		return
 	}
@@ -40,15 +42,17 @@ func (ctrl *CacheController) FlushCache(c *gin.Context) {
 	err := ctrl.cache.FlushAll()
 	if err != nil {
 		utils.LogError("Failed to flush cache: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"msg":     "Failed to flush cache",
+		c.JSON(http.StatusInternalServerError, dtos.StandardResponse{
+			Status:  false,
+			Message: "Failed to flush cache",
+			Data:    nil,
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"msg":     "Cache flushed successfully",
+	c.JSON(http.StatusOK, dtos.StandardResponse{
+		Status:  true,
+		Message: "Cache flushed successfully",
+		Data:    nil,
 	})
 }

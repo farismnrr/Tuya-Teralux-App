@@ -50,7 +50,7 @@ func LoadConfig() {
 
 // findEnvFile searches for the .env file in the current directory and up to three parent levels.
 //
-// @return string The path to the .env file if found, otherwise an empty string.
+// return string The path to the .env file if found, otherwise an empty string.
 func findEnvFile() string {
 	path := ".env"
 	if _, err := os.Stat(path); err == nil {
@@ -70,7 +70,7 @@ func findEnvFile() string {
 // GetConfig returns the singleton AppConfig instance.
 // If the config hasn't been loaded, it triggers LoadConfig first.
 //
-// @return *Config The global configuration object.
+// return *Config The global configuration object.
 func GetConfig() *Config {
 	if AppConfig == nil {
 		LoadConfig()

@@ -17,7 +17,7 @@ type TuyaAuthService struct {
 
 // NewTuyaAuthService initializes a new instance of TuyaAuthService.
 //
-// @return *TuyaAuthService The initialized authentication service with a default timeout configuration.
+// return *TuyaAuthService The initialized authentication service with a default timeout configuration.
 func NewTuyaAuthService() *TuyaAuthService {
 	return &TuyaAuthService{
 		client: &http.Client{Timeout: 30 * time.Second},
@@ -26,10 +26,10 @@ func NewTuyaAuthService() *TuyaAuthService {
 
 // FetchToken obtains a new access token from the Tuya API.
 //
-// @param url The complete API endpoint URL for token retrieval (e.g., /v1.0/token?grant_type=1).
-// @param headers A map containing the necessary signing headers (client_id, sign, t, sign_method, nonce, etc.).
-// @return *entities.TuyaAuthResponse The structured response containing the access token, refresh token, and expiration time.
-// @return error An error if the HTTP request fails, status code is not 200, or the response body cannot be parsed.
+// param url The complete API endpoint URL for token retrieval (e.g., /v1.0/token?grant_type=1).
+// param headers A map containing the necessary signing headers (client_id, sign, t, sign_method, nonce, etc.).
+// return *entities.TuyaAuthResponse The structured response containing the access token, refresh token, and expiration time.
+// return error An error if the HTTP request fails, status code is not 200, or the response body cannot be parsed.
 // @throws error If the Tuya API returns a non-200 status code indicating authentication failure.
 func (s *TuyaAuthService) FetchToken(url string, headers map[string]string) (*entities.TuyaAuthResponse, error) {
 	utils.LogDebug("FetchToken: requesting %s", url)

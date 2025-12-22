@@ -41,11 +41,15 @@ fun SensorDeviceScreen(
             try {
                 val response = RetrofitClient.instance.getSensorData("Bearer $token", deviceId)
                 if (response.isSuccessful && response.body()?.status == true) {
-                    val data = response.body()!!.data
-                    temperature = data!!.temperature
-                    humidity = data.humidity
-                    statusText = data.status_text
-                    tempUnit = data.temp_unit
+                    val data = response.body()?.data
+                    if (data != null) {
+                        temperature = data.temperature
+                        humidity = data.humidity
+                        statusText = data.status_text
+                        tempUnit = data.temp_unit
+                    } else {
+                        if (isLoading) statusText = "No data available"
+                    }
                 } else {
                     if (isLoading) statusText = "Failed to load data"
                 }

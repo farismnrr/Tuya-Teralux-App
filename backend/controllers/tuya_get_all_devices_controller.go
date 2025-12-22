@@ -23,7 +23,7 @@ func NewTuyaGetAllDevicesController(useCase *usecases.TuyaGetAllDevicesUseCase) 
 
 // GetAllDevices handles GET /api/tuya/devices endpoint
 // @Summary      Get All Devices
-// @Description  Retrieves a list of all devices associated with the Tuya user
+// @Description  Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE: 0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name.
 // @Tags         Devices
 // @Accept       json
 // @Produce      json

@@ -67,7 +67,7 @@ func (ctrl *TuyaDeviceControlController) SendCommand(c *gin.Context) {
 	c.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "Command sent successfully",
-		Data:    gin.H{"success": success},
+		Data:    dtos.SuccessResponseDTO{Success: success},
 	})
 }
 
@@ -116,6 +116,6 @@ func (ctrl *TuyaDeviceControlController) SendIRACCommand(c *gin.Context) {
 	c.JSON(http.StatusOK, dtos.StandardResponse{
 		Status:  true,
 		Message: "IR AC Command sent successfully",
-		Data:    gin.H{"success": success},
+		Data:    dtos.SuccessResponseDTO{Success: success},
 	})
 }

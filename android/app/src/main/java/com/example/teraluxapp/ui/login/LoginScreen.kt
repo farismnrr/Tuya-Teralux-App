@@ -37,7 +37,11 @@ fun LoginScreen(onLoginSuccess: (String, String) -> Unit) {
                     scope.launch {
                         try {
                             val response = RetrofitClient.instance.authenticate()
-                            onLoginSuccess(response.data.accessToken, response.data.uid)
+                            response.data?.let {
+                                onLoginSuccess(it.accessToken, it.uid) 
+                            } ?: run {
+                                error = "Login failed: No data received"
+                            }
                         } catch (e: Exception) {
                             error = "Login failed: ${e.message}"
                             e.printStackTrace()

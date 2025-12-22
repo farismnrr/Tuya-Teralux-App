@@ -22,8 +22,8 @@ type TuyaDeviceService struct {
 
 // NewTuyaDeviceService initializes a new instance of TuyaDeviceService.
 //
-// @param cache A *BadgerService instance for caching responses. Can be nil if caching is disabled.
-// @return *TuyaDeviceService A pointer to the initialized service.
+// param cache A *BadgerService instance for caching responses. Can be nil if caching is disabled.
+// return *TuyaDeviceService A pointer to the initialized service.
 func NewTuyaDeviceService(cache *BadgerService) *TuyaDeviceService {
 	return &TuyaDeviceService{
 		client: &http.Client{Timeout: 30 * time.Second},
@@ -33,8 +33,8 @@ func NewTuyaDeviceService(cache *BadgerService) *TuyaDeviceService {
 
 // InvalidateDeviceCache forces the removal of cached device lists for a specific user.
 //
-// @param uid The unique user ID (UID) for whom the cache should be cleared.
-// @return error An error if the cache deletion fails.
+// param uid The unique user ID (UID) for whom the cache should be cleared.
+// return error An error if the cache deletion fails.
 func (s *TuyaDeviceService) InvalidateDeviceCache(uid string) error {
 	key := fmt.Sprintf("tuya:devices:%s", uid)
 	return s.cache.Delete(key)
@@ -43,10 +43,10 @@ func (s *TuyaDeviceService) InvalidateDeviceCache(uid string) error {
 // FetchDevices retrieves the list of devices associated with the authenticated user.
 // This method supports caching; it returns cached data if available and valid.
 //
-// @param url The full API URL to the Tuya "Refresh Device List" endpoint.
-// @param headers A map containing required HTTP headers, specifically 'access_token'.
-// @return *entities.TuyaDevicesResponse The parsed response containing the list of devices.
-// @return error An error if the HTTP request fails, parsing fails, or the API returns a non-200 status.
+// param url The full API URL to the Tuya "Refresh Device List" endpoint.
+// param headers A map containing required HTTP headers, specifically 'access_token'.
+// return *entities.TuyaDevicesResponse The parsed response containing the list of devices.
+// return error An error if the HTTP request fails, parsing fails, or the API returns a non-200 status.
 // @throws error If the network is unreachable or the response body is malformed.
 func (s *TuyaDeviceService) FetchDevices(url string, headers map[string]string) (*entities.TuyaDevicesResponse, error) {
 	cacheKey := fmt.Sprintf("tuya:devices:%s", utils.HashString(url))
@@ -113,10 +113,10 @@ func (s *TuyaDeviceService) FetchDevices(url string, headers map[string]string) 
 
 // FetchDeviceByID retrieves detailed information for a specific device.
 //
-// @param url The full API URL targeting a specific device ID.
-// @param headers A map containing required HTTP headers.
-// @return *entities.TuyaDeviceResponse The parsed response containing device details.
-// @return error An error if the request, execution, or parsing fails.
+// param url The full API URL targeting a specific device ID.
+// param headers A map containing required HTTP headers.
+// return *entities.TuyaDeviceResponse The parsed response containing device details.
+// return error An error if the request, execution, or parsing fails.
 // @throws error If the API returns a non-200 status code.
 func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]string) (*entities.TuyaDeviceResponse, error) {
 	if gin.Mode() == gin.TestMode {
@@ -176,10 +176,10 @@ func (s *TuyaDeviceService) FetchDeviceByID(url string, headers map[string]strin
 
 // FetchBatchDeviceStatus queries the real-time status of multiple devices.
 //
-// @param url The full API URL for batch status query.
-// @param headers A map containing required HTTP headers.
-// @return *entities.TuyaBatchStatusResponse The parsed response containing status for requested devices.
-// @return error An error if the network request or parsing fails.
+// param url The full API URL for batch status query.
+// param headers A map containing required HTTP headers.
+// return *entities.TuyaBatchStatusResponse The parsed response containing status for requested devices.
+// return error An error if the network request or parsing fails.
 func (s *TuyaDeviceService) FetchBatchDeviceStatus(url string, headers map[string]string) (*entities.TuyaBatchStatusResponse, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -220,11 +220,11 @@ func (s *TuyaDeviceService) FetchBatchDeviceStatus(url string, headers map[strin
 
 // SendCommand dispatches a control command to a specified device.
 //
-// @param url The full API URL including device ID for sending commands.
-// @param headers A map containing required HTTP headers.
-// @param commands A slice of TuyaCommand objects containing the code and value to set.
-// @return *entities.TuyaCommandResponse The API response indicating success or failure.
-// @return error An error if serialization of commands or the network request fails.
+// param url The full API URL including device ID for sending commands.
+// param headers A map containing required HTTP headers.
+// param commands A slice of TuyaCommand objects containing the code and value to set.
+// return *entities.TuyaCommandResponse The API response indicating success or failure.
+// return error An error if serialization of commands or the network request fails.
 // @throws error If the API returns a status other than 200 OK.
 func (s *TuyaDeviceService) SendCommand(url string, headers map[string]string, commands []entities.TuyaCommand) (*entities.TuyaCommandResponse, error) {
 	reqBody := entities.TuyaCommandRequest{
@@ -276,11 +276,11 @@ func (s *TuyaDeviceService) SendCommand(url string, headers map[string]string, c
 
 // SendIRCommand sends a raw JSON command payload to an Infrared (IR) controlled device.
 //
-// @param url The full API URL including the infrared ID or remote ID.
-// @param headers A map containing required HTTP headers.
-// @param jsonBody The raw JSON byte slice representing the IR command payload.
-// @return *entities.TuyaCommandResponse The API response.
-// @return error An error if the request creation or execution fails.
+// param url The full API URL including the infrared ID or remote ID.
+// param headers A map containing required HTTP headers.
+// param jsonBody The raw JSON byte slice representing the IR command payload.
+// return *entities.TuyaCommandResponse The API response.
+// return error An error if the request creation or execution fails.
 func (s *TuyaDeviceService) SendIRCommand(url string, headers map[string]string, jsonBody []byte) (*entities.TuyaCommandResponse, error) {
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 	if err != nil {
@@ -323,10 +323,10 @@ func (s *TuyaDeviceService) SendIRCommand(url string, headers map[string]string,
 // FetchDeviceSpecification retrieves the detailed specifications (functions, status sets) of a device.
 // This method supports caching to reduce API load.
 //
-// @param url The full API URL to fetch specifications.
-// @param headers A map containing required HTTP headers.
-// @return *entities.TuyaDeviceSpecificationResponse The parsed specification response.
-// @return error An error if the request fails.
+// param url The full API URL to fetch specifications.
+// param headers A map containing required HTTP headers.
+// return *entities.TuyaDeviceSpecificationResponse The parsed specification response.
+// return error An error if the request fails.
 // @throws error if the content is not valid JSON or network error occurs.
 func (s *TuyaDeviceService) FetchDeviceSpecification(url string, headers map[string]string) (*entities.TuyaDeviceSpecificationResponse, error) {
 	cacheKey := fmt.Sprintf("tuya:specs:%s", utils.HashString(url))

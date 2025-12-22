@@ -12,12 +12,12 @@ import (
 //
 // Message Structure: clientID + accessToken + timestamp + stringToSign
 //
-// @param clientID The Tuya Client ID.
-// @param clientSecret The Tuya Client Secret (used as the HMAC key).
-// @param accessToken The current access token (can be empty for token retrieval).
-// @param timestamp The current timestamp in milliseconds.
-// @param stringToSign The constructed string representing request details (method, hash, url).
-// @return string The uppercased hexadecimal signature.
+// param clientID The Tuya Client ID.
+// param clientSecret The Tuya Client Secret (used as the HMAC key).
+// param accessToken The current access token (can be empty for token retrieval).
+// param timestamp The current timestamp in milliseconds.
+// param stringToSign The constructed string representing request details (method, hash, url).
+// return string The uppercased hexadecimal signature.
 func GenerateTuyaSignature(clientID, clientSecret, accessToken, timestamp, stringToSign string) string {
 	// Concatenate: client_id + access_token + t + stringToSign
 	message := clientID + accessToken + timestamp + stringToSign
@@ -36,11 +36,11 @@ func GenerateTuyaSignature(clientID, clientSecret, accessToken, timestamp, strin
 //
 // Format: HTTPMethod + "\n" + ContentHash + "\n" + Headers + "\n" + URL
 //
-// @param httpMethod The HTTP method (GET, POST, etc.).
-// @param contentHash The SHA256 hash of the request body (or empty string hash for GET).
-// @param headers The canonical headers string (often empty).
-// @param url The request URL path.
-// @return string The formatted string to sign.
+// param httpMethod The HTTP method (GET, POST, etc.).
+// param contentHash The SHA256 hash of the request body (or empty string hash for GET).
+// param headers The canonical headers string (often empty).
+// param url The request URL path.
+// return string The formatted string to sign.
 func GenerateTuyaStringToSign(httpMethod, contentHash, headers, url string) string {
 	return httpMethod + "\n" + contentHash + "\n" + headers + "\n" + url
 }

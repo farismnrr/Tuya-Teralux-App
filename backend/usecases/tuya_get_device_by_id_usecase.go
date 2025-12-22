@@ -18,8 +18,8 @@ type TuyaGetDeviceByIDUseCase struct {
 
 // NewTuyaGetDeviceByIDUseCase initializes a new TuyaGetDeviceByIDUseCase.
 //
-// @param service The TuyaDeviceService used regarding API requests.
-// @return *TuyaGetDeviceByIDUseCase A pointer to the initialized usecase.
+// param service The TuyaDeviceService used regarding API requests.
+// return *TuyaGetDeviceByIDUseCase A pointer to the initialized usecase.
 func NewTuyaGetDeviceByIDUseCase(service *services.TuyaDeviceService) *TuyaGetDeviceByIDUseCase {
 	return &TuyaGetDeviceByIDUseCase{
 		service: service,
@@ -32,10 +32,10 @@ func NewTuyaGetDeviceByIDUseCase(service *services.TuyaDeviceService) *TuyaGetDe
 // URL: https://openapi.tuyacn.com/v1.0/devices/{device_id}
 // Method: GET
 //
-// @param accessToken The valid OAuth 2.0 access token.
-// @param deviceID The unique ID of the device to fetch.
-// @return *dtos.TuyaDeviceDTO The detailed device information object.
-// @return error An error if the request fails.
+// param accessToken The valid OAuth 2.0 access token.
+// param deviceID The unique ID of the device to fetch.
+// return *dtos.TuyaDeviceDTO The detailed device information object.
+// return error An error if the request fails.
 // @throws error If the API returns a failure response.
 func (uc *TuyaGetDeviceByIDUseCase) GetDeviceByID(accessToken, deviceID string) (*dtos.TuyaDeviceDTO, error) {
 	// Get config

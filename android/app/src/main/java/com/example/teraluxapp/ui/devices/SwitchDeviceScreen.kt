@@ -59,7 +59,7 @@ fun SwitchDeviceScreen(
         }
         try {
             val response = RetrofitClient.instance.getDeviceById("Bearer $token", deviceId)
-            response.data.device.status?.forEach { status ->
+            response.data?.device?.status?.forEach { status ->
                if (switchConfigs.any { it.code == status.code }) {
                    val isOn = status.value.toString().toBoolean()
                    switchStates[status.code] = isOn

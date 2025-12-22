@@ -22,8 +22,8 @@ type TuyaDeviceControlUseCase struct {
 
 // NewTuyaDeviceControlUseCase initializes a new TuyaDeviceControlUseCase.
 //
-// @param service The TuyaDeviceService used for API communication.
-// @return *TuyaDeviceControlUseCase A pointer to the initialized usecase.
+// param service The TuyaDeviceService used for API communication.
+// return *TuyaDeviceControlUseCase A pointer to the initialized usecase.
 func NewTuyaDeviceControlUseCase(service *services.TuyaDeviceService) *TuyaDeviceControlUseCase {
 	return &TuyaDeviceControlUseCase{
 		service: service,
@@ -34,13 +34,13 @@ func NewTuyaDeviceControlUseCase(service *services.TuyaDeviceService) *TuyaDevic
 // It first attempts to resolve the correct gateway/infrared ID before sending the command.
 // If the primary IR command fails with specific error codes (e.g., 30100), it attempts a fallback to standard device control.
 //
-// @param accessToken The valid OAuth 2.0 access token.
-// @param infraredID The ID of the IR blaster device (or virtual ID).
-// @param remoteID The ID of the configured remote control for the AC.
-// @param code The command code (e.g., "temp", "mode", "power", "wind").
-// @param value The value for the command (e.g., 24 for temp, 1 for power on).
-// @return bool True if the command was executed successfully.
-// @return error An error if the command failed after all attempts.
+// param accessToken The valid OAuth 2.0 access token.
+// param infraredID The ID of the IR blaster device (or virtual ID).
+// param remoteID The ID of the configured remote control for the AC.
+// param code The command code (e.g., "temp", "mode", "power", "wind").
+// param value The value for the command (e.g., 24 for temp, 1 for power on).
+// return bool True if the command was executed successfully.
+// return error An error if the command failed after all attempts.
 // @throws error If the API returns a failure code that cannot be handled by fallback logic.
 func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, remoteID, code string, value int) (bool, error) {
 	config := utils.GetConfig()
@@ -226,11 +226,11 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 // SendCommand sends a set of commands to a standard Tuya device.
 // It generates the necessary signatures and headers, then dispatches the request via the service layer.
 //
-// @param accessToken The valid OAuth 2.0 access token.
-// @param deviceID The unique ID of the device to control.
-// @param commands A list of TuyaCommandDTOs representing the instructions.
-// @return bool True if the command was executed successfully.
-// @return error An error if the API request fails or returns an error code.
+// param accessToken The valid OAuth 2.0 access token.
+// param deviceID The unique ID of the device to control.
+// param commands A list of TuyaCommandDTOs representing the instructions.
+// return bool True if the command was executed successfully.
+// return error An error if the API request fails or returns an error code.
 // @throws error If the command fails, including specific retry logic for legacy switch commands involving naming mismatch.
 func (uc *TuyaDeviceControlUseCase) SendCommand(accessToken, deviceID string, commands []dtos.TuyaCommandDTO) (bool, error) {
 	// Get config

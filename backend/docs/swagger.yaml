@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  controllers.SensorDataResponse:
+  dtos.SensorDataDTO:
     properties:
       battery_percentage:
         type: integer
@@ -45,6 +45,10 @@ definitions:
     properties:
       category:
         type: string
+      collections:
+        items:
+          $ref: '#/definitions/dtos.TuyaDeviceDTO'
+        type: array
       create_time:
         type: integer
       custom_name:
@@ -66,6 +70,16 @@ definitions:
       online:
         type: boolean
       product_name:
+        type: string
+      remote_category:
+        type: string
+      remote_icon:
+        type: string
+      remote_id:
+        type: string
+      remote_name:
+        type: string
+      remote_product_name:
         type: string
       status:
         items:
@@ -111,6 +125,29 @@ info:
   title: Teralux API
   version: "1.0"
 paths:
+  /api/cache/flush:
+    delete:
+      consumes:
+      - application/json
+      description: Remove all data from the cache storage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Flush all cache
+      tags:
+      - Cache
   /api/tuya/auth:
     get:
       consumes:
@@ -141,7 +178,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves a list of all devices associated with the Tuya user
+      description: 'Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE:
+        0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name.'
       produces:
       - application/json
       responses:
@@ -297,7 +335,7 @@ paths:
             - $ref: '#/definitions/dtos.StandardResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/controllers.SensorDataResponse'
+                  $ref: '#/definitions/dtos.SensorDataDTO'
               type: object
         "400":
           description: Bad Request

@@ -18,6 +18,42 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/cache/flush": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove all data from the cache storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cache"
+                ],
+                "summary": "Flush all cache",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/tuya/auth": {
             "get": {
                 "security": [
@@ -71,7 +107,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves a list of all devices associated with the Tuya user",
+                "description": "Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE: 0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name.",
                 "consumes": [
                     "application/json"
                 ],
@@ -329,7 +365,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/controllers.SensorDataResponse"
+                                            "$ref": "#/definitions/dtos.SensorDataDTO"
                                         }
                                     }
                                 }
@@ -353,7 +389,7 @@
         }
     },
     "definitions": {
-        "controllers.SensorDataResponse": {
+        "dtos.SensorDataDTO": {
             "type": "object",
             "properties": {
                 "battery_percentage": {
@@ -421,6 +457,12 @@
                 "category": {
                     "type": "string"
                 },
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.TuyaDeviceDTO"
+                    }
+                },
                 "create_time": {
                     "type": "integer"
                 },
@@ -452,6 +494,21 @@
                     "type": "boolean"
                 },
                 "product_name": {
+                    "type": "string"
+                },
+                "remote_category": {
+                    "type": "string"
+                },
+                "remote_icon": {
+                    "type": "string"
+                },
+                "remote_id": {
+                    "type": "string"
+                },
+                "remote_name": {
+                    "type": "string"
+                },
+                "remote_product_name": {
                     "type": "string"
                 },
                 "status": {

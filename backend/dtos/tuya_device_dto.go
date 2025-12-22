@@ -2,21 +2,26 @@ package dtos
 
 // TuyaDeviceDTO represents a single device for API consumers
 type TuyaDeviceDTO struct {
-	ID          string                `json:"id"`
-	Name        string                `json:"name"`
-	Category    string                `json:"category"`
-	ProductName string                `json:"product_name"`
-	Online      bool                  `json:"online"`
-	Icon        string                `json:"icon"`
-	Status      []TuyaDeviceStatusDTO `json:"status"`
-	CustomName  string                `json:"custom_name,omitempty"`
-	Model       string                `json:"model,omitempty"`
-	IP          string                `json:"ip,omitempty"`
-	LocalKey    string                `json:"local_key"`
-	GatewayID   string                `json:"gateway_id"`
-	CreateTime  int64                 `json:"create_time"`
-	UpdateTime  int64                 `json:"update_time"`
-	Collections []TuyaDeviceDTO       `json:"collections,omitempty"`
+	ID                string                `json:"id"`
+	RemoteID          string                `json:"remote_id,omitempty"`
+	Name              string                `json:"name"`
+	RemoteName        string                `json:"remote_name,omitempty"`
+	Category          string                `json:"category"`
+	RemoteCategory    string                `json:"remote_category,omitempty"`
+	ProductName       string                `json:"product_name"`
+	RemoteProductName string                `json:"remote_product_name,omitempty"`
+	Online            bool                  `json:"online"`
+	Icon              string                `json:"icon"`
+	RemoteIcon        string                `json:"remote_icon,omitempty"`
+	Status            []TuyaDeviceStatusDTO `json:"status"`
+	CustomName        string                `json:"custom_name,omitempty"`
+	Model             string                `json:"model,omitempty"`
+	IP                string                `json:"ip,omitempty"`
+	LocalKey          string                `json:"local_key"`
+	GatewayID         string                `json:"gateway_id"`
+	CreateTime        int64                 `json:"create_time"`
+	UpdateTime        int64                 `json:"update_time"`
+	Collections       []TuyaDeviceDTO       `json:"collections,omitempty"`
 }
 
 // TuyaCommandDTO represents a single command
@@ -54,9 +59,3 @@ type TuyaDeviceResponseDTO struct {
 	Device TuyaDeviceDTO `json:"device"`
 }
 
-// StandardResponse represents the standardized API response structure
-type StandardResponse struct {
-	Status  bool        `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-}

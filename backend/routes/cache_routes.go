@@ -8,8 +8,8 @@ import (
 
 // SetupCacheRoutes registers endpoints for cache management.
 //
-// @param rg The router group to attach the cache routes to.
-// @param controller The controller handling cache operations.
+// param rg The router group to attach the cache routes to.
+// param controller The controller handling cache operations.
 func SetupCacheRoutes(rg *gin.RouterGroup, controller *controllers.CacheController) {
 	cacheGroup := rg.Group("/api/cache")
 	{

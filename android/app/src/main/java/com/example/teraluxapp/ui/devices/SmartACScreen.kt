@@ -63,7 +63,7 @@ fun SmartACScreen(
     LaunchedEffect(Unit) {
         try {
             val response = RetrofitClient.instance.getDeviceById("Bearer $token", deviceId)
-            val statuses = response.data.device.status
+            val statuses = response.data?.device?.status
             
             // DEBUG: Log all statuses
             rawStatus = statuses?.joinToString("\n") { "${it.code}: ${it.value}" } ?: "No Status"

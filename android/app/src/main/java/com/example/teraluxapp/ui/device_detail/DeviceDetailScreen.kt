@@ -22,7 +22,7 @@ fun DeviceDetailScreen(deviceId: String, token: String, onBack: () -> Unit) {
             try {
                 // If getDeviceById returns SingleDeviceResponse wrapping the device
                 val response = RetrofitClient.instance.getDeviceById("Bearer $token", deviceId)
-                device = response.data.device
+                device = response.data?.device
             } catch (e: Exception) {
                 error = "Failed to load device details: ${e.message}"
             } finally {
