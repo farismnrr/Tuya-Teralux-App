@@ -118,15 +118,15 @@ fun SwitchDeviceScreen(
                     val isOn = switchStates[config.code] == true
                     
                     // Responsive sizing
-                    val weight = if (switchConfigs.size > 1) 1f else 0f
-                    val width = if (switchConfigs.size == 1) 160.dp else Dp.Unspecified
-
+                    // OLD Logic: val weight = if (switchConfigs.size > 1) 1f else 0f
+                    // NEW Logic: Always fixed width, centered by parent Row arrangement
+                    
                     ModernSwitchPanel(
                         label = config.label,
                         isOn = isOn,
                         onClick = { sendCommand(config.code, !isOn) },
                         modifier = Modifier
-                            .then(if (weight > 0f) Modifier.weight(weight) else Modifier.width(width))
+                            .width(120.dp) // Fixed small width as requested ("kecil aja")
                     )
                 }
             }
@@ -141,7 +141,7 @@ fun ModernSwitchPanel(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Panel/Card implementation matching the image
+    // Reverted to Original Default Style (Card/Gradient) as requested
     Box(
         modifier = modifier
             .height(280.dp) // Tall vertical ratio

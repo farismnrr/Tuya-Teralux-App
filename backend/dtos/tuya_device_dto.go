@@ -12,7 +12,6 @@ type TuyaDeviceDTO struct {
 	RemoteProductName string                `json:"remote_product_name,omitempty"`
 	Online            bool                  `json:"online"`
 	Icon              string                `json:"icon"`
-	RemoteIcon        string                `json:"remote_icon,omitempty"`
 	Status            []TuyaDeviceStatusDTO `json:"status"`
 	CustomName        string                `json:"custom_name,omitempty"`
 	Model             string                `json:"model,omitempty"`
@@ -37,9 +36,9 @@ type TuyaCommandsRequestDTO struct {
 
 // TuyaIRACCommandDTO represents a single IR AC command request
 type TuyaIRACCommandDTO struct {
-	RemoteID   string `json:"remote_id" binding:"required"`
-	Code       string `json:"code" binding:"required"`
-	Value      int    `json:"value"`
+	RemoteID string `json:"remote_id" binding:"required"`
+	Code     string `json:"code" binding:"required"`
+	Value    int    `json:"value"`
 }
 
 // TuyaDeviceStatusDTO represents device status for API consumers
@@ -58,4 +57,3 @@ type TuyaDevicesResponseDTO struct {
 type TuyaDeviceResponseDTO struct {
 	Device TuyaDeviceDTO `json:"device"`
 }
-

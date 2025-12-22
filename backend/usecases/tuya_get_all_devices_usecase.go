@@ -342,7 +342,7 @@ func (uc *TuyaGetAllDevicesUseCase) processResponseMode2(deviceDTOs []dtos.TuyaD
 			parentHub = hub
 			found = true
 		}
-		
+
 		if !found {
 			// Check local key if not found by GatewayID
 			if hub, ok := hubLocalKeyMap[remote.LocalKey]; ok {
@@ -362,7 +362,7 @@ func (uc *TuyaGetAllDevicesUseCase) processResponseMode2(deviceDTOs []dtos.TuyaD
 		mergedDevice.RemoteName = remote.Name
 		mergedDevice.RemoteCategory = remote.Category
 		mergedDevice.RemoteProductName = remote.ProductName
-		mergedDevice.RemoteIcon = remote.Icon
+		mergedDevice.Icon = remote.Icon
 		mergedDevice.CreateTime = remote.CreateTime
 		mergedDevice.UpdateTime = remote.UpdateTime
 
