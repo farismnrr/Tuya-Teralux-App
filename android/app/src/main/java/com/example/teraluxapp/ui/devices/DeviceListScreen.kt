@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +41,8 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
     var page by remember { mutableIntStateOf(1) }
     var totalDevices by remember { mutableIntStateOf(0) }
     val limit = 6
+    val snackbarHostState = remember { SnackbarHostState() }
+    var isFlushing by remember { mutableStateOf(false) }
 
     val fetchDevices = { pageNum: Int ->
         scope.launch {
@@ -55,8 +58,14 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                     
                     val flatList = ArrayList<Device>()
                     for (d in rawDevices) {
-                        flatList.add(d)
-                        d.collections?.let { flatList.addAll(it) }
+                        // If device has collections (e.g., IR Hub with AC remotes), 
+                        // skip the hub itself and only add the remotes
+                        if (d.collections.isNullOrEmpty()) {
+                            flatList.add(d)
+                        } else {
+                            // Only add the collections (AC remotes), not the hub
+                            flatList.addAll(d.collections)
+                        }
                     }
                     devices = flatList
                 } else {
@@ -81,12 +90,38 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
             TopAppBar(
                 title = { Text("My Devices") },
                 actions = {
+                    // Cache flush button
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                isFlushing = true
+                                try {
+                                    val response = RetrofitClient.instance.flushCache("Bearer $token")
+                                    if (response.isSuccessful) {
+                                        snackbarHostState.showSnackbar("Cache cleared successfully")
+                                        fetchDevices(page) // Refresh device list
+                                    } else {
+                                        snackbarHostState.showSnackbar("Failed to clear cache: ${response.code()}")
+                                    }
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Error: ${e.message}")
+                                } finally {
+                                    isFlushing = false
+                                }
+                            }
+                        },
+                        enabled = !isFlushing
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Clear Cache")
+                    }
+                    // Refresh button
                     IconButton(onClick = { fetchDevices(page) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (isLoading) {
@@ -124,10 +159,21 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                         for (i in 0 until 3) {
                             if (i < firstRowDevices.size) {
                                 val device = firstRowDevices[i]
+                                // For IR devices, use remote_id as deviceId and id as gatewayId
+                                val actualDeviceId = device.remoteId ?: device.id
+                                val actualGatewayId = if (device.remoteId != null) device.id else device.gatewayId
                                 DeviceItem(
                                     device = device,
                                     modifier = Modifier.weight(1f),
-                                    onClick = { onDeviceClick(device.id, device.category, device.name, device.gatewayId) }
+                                    onClick = {
+                                        if (!device.online) {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Device is offline and cannot be controlled")
+                                            }
+                                        } else {
+                                            onDeviceClick(actualDeviceId, device.category, device.name, actualGatewayId)
+                                        }
+                                    }
                                 )
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
@@ -145,10 +191,21 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                         for (i in 0 until 3) {
                             if (i < secondRowDevices.size) {
                                 val device = secondRowDevices[i]
+                                // For IR devices, use remote_id as deviceId and id as gatewayId
+                                val actualDeviceId = device.remoteId ?: device.id
+                                val actualGatewayId = if (device.remoteId != null) device.id else device.gatewayId
                                 DeviceItem(
                                     device = device,
                                     modifier = Modifier.weight(1f),
-                                    onClick = { onDeviceClick(device.id, device.category, device.name, device.gatewayId) }
+                                    onClick = {
+                                        if (!device.online) {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Device is offline and cannot be controlled")
+                                            }
+                                        } else {
+                                            onDeviceClick(actualDeviceId, device.category, device.name, actualGatewayId)
+                                        }
+                                    }
                                 )
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))

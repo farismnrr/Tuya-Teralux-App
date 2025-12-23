@@ -49,6 +49,11 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") deviceId: String
     ): Response<BaseResponse<SensorDataResponse>>
+
+    @retrofit2.http.DELETE("api/cache/flush")
+    suspend fun flushCache(
+        @Header("Authorization") token: String
+    ): Response<BaseResponse<Any?>>
 }
 
 

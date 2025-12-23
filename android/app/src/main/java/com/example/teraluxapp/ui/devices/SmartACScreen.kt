@@ -43,6 +43,14 @@ fun SmartACScreen(
 ) {
     val scope = rememberCoroutineScope()
     
+    // DEBUG: Log parameters
+    LaunchedEffect(Unit) {
+        android.util.Log.d("SmartACScreen", "=== PARAMETERS ===")
+        android.util.Log.d("SmartACScreen", "deviceId (remote_id): $deviceId")
+        android.util.Log.d("SmartACScreen", "infraredId (hub): $infraredId")
+        android.util.Log.d("SmartACScreen", "deviceName: $deviceName")
+    }
+    
     // State with integer values matching Tuya IR API
     var temp by remember { mutableStateOf(24) }
     var modeIndex by remember { mutableStateOf(0) } // 0=cool, 1=heat, 2=auto, 3=fan, 4=dry
@@ -131,22 +139,40 @@ fun SmartACScreen(
         }
     }
 
-    // Send IR AC command
-    // Send IR AC command
-    val sendIRCommand = { code: String, value: Int ->
-        // Optimistic Save: Save immediately to local storage
+    // Send Command (IR endpoint with client-side mapping)
+    val sendIRCommand = { code: String, value: Any ->
+        // Optimistic Save
         prefs.saveACState(deviceId, isOn, temp, modeIndex, windIndex)
 
         scope.launch {
             isProcessing = true
             try {
+                // For IR devices, we still use the IR endpoint but with proper remote_id
+                // deviceId = remote_id (the AC remote paired to the hub)
+                // infraredId = the Smart IR Hub ID
+                
+                // Convert value to Int for IR API
+                val intValue = when (value) {
+                    is Boolean -> if (value) 1 else 0
+                    is Int -> value
+                    else -> 0
+                }
+
+                android.util.Log.d("SmartACScreen", "Sending IR Command: $code = $intValue to remote $deviceId via hub $infraredId")
+                
                 val request = IRACCommandRequest(
-                    remote_id = deviceId,
+                    remote_id = deviceId,  // This is the AC remote ID
                     code = code,
-                    value = value
+                    value = intValue
                 )
                 val response = RetrofitClient.instance.sendIRACCommand("Bearer $token", infraredId, request)
-                // if (response.isSuccessful) { ... } // Already saved optimistically
+                
+                if (response.isSuccessful && response.body()?.status == true) {
+                     android.util.Log.d("SmartACScreen", "Command Success")
+                } else {
+                     android.util.Log.e("SmartACScreen", "Command Failed: ${response.code()}")
+                }
+
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {

@@ -39,40 +39,86 @@ fun SwitchDeviceScreen(
 ) {
     val scope = rememberCoroutineScope()
     
-    // Determine switch configuration
-    val switchConfigs = remember(deviceId) {
-        when (deviceId) {
-            "a378e2ef14e8748cf2cimq" -> listOf(SwitchConfig("switch", "Switch"))
-            "a37b710af2df8a6cdcxqlv" -> listOf(SwitchConfig("switch1", "Switch"), SwitchConfig("switch2", "Switch"))
-            "a33e768a19b3edc6a98rga" -> listOf(SwitchConfig("switch_1", "Switch 1"), SwitchConfig("switch_2", "Switch 2"), SwitchConfig("switch_3", "Switch 3"))
-            else -> listOf(SwitchConfig("switch_1", "Switch 1"), SwitchConfig("switch_2", "Switch 2"))
-        }
-    }
-
+    // Dynamic switch configuration from device status
+    var switchConfigs by remember { mutableStateOf<List<SwitchConfig>>(emptyList()) }
     val switchStates = remember { mutableStateMapOf<String, Boolean>() }
     var isOnline by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { com.example.teraluxapp.utils.DevicePreferences(context) }
 
+
+    // Helper function to check if status is a valid switch control
+    fun isValidSwitchControl(status: com.example.teraluxapp.data.model.DeviceStatus): Boolean {
+        val code = status.code.lowercase()
+        return code.contains("switch") && 
+               !code.contains("countdown") &&
+               !code.contains("relay") &&
+               !code.contains("light") &&
+               status.value is Boolean
+    }
+
+    // Helper function to generate switch label
+    fun generateSwitchLabel(code: String, index: Int, totalSwitches: Int): String {
+        if (totalSwitches == 1) return "Switch"
+        
+        val num = code.filter { it.isDigit() }.toIntOrNull() ?: (index + 1)
+        return "Switch $num"
+    }
+
+    // Helper function to initialize switch states
+    fun initializeSwitchStates(switches: List<com.example.teraluxapp.data.model.DeviceStatus>) {
+        switches.forEach { status ->
+            val isOn = status.value.toString().toBoolean()
+            switchStates[status.code] = isOn
+            prefs.saveGenericSwitchState(deviceId, status.code, isOn)
+        }
+    }
+
     // Init & Sync
     LaunchedEffect(deviceId) {
-        switchConfigs.forEach { config ->
-            switchStates[config.code] = prefs.getGenericSwitchState(deviceId, config.code)
-        }
+        isLoading = true
+        errorMessage = null
+        
         try {
             val response = RetrofitClient.instance.getDeviceById("Bearer $token", deviceId)
-            val dev = response.data?.device
-            if (dev != null) {
-                isOnline = dev.online
-                dev.status?.forEach { status ->
-                   if (switchConfigs.any { it.code == status.code }) {
-                       val isOn = status.value.toString().toBoolean()
-                       switchStates[status.code] = isOn
-                       prefs.saveGenericSwitchState(deviceId, status.code, isOn)
-                   }
-                }
+            val device = response.data?.device
+            
+            // Early return if device is null
+            if (device == null) {
+                errorMessage = "Failed to load device information"
+                return@LaunchedEffect
             }
-        } catch (e: Exception) { e.printStackTrace() }
+            
+            isOnline = device.online
+            
+            // Extract and filter switch controls
+            val switches = device.status?.filter { isValidSwitchControl(it) } ?: emptyList()
+            
+            // Early return if no switches found
+            if (switches.isEmpty()) {
+                errorMessage = "No switch controls found for this device"
+                return@LaunchedEffect
+            }
+            
+            // Generate switch configurations
+            switchConfigs = switches.mapIndexed { index, status ->
+                SwitchConfig(
+                    code = status.code,
+                    label = generateSwitchLabel(status.code, index, switches.size)
+                )
+            }
+            
+            // Initialize switch states
+            initializeSwitchStates(switches)
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMessage = "Error: ${e.message}"
+        } finally {
+            isLoading = false
+        }
     }
 
     fun sendCommand(code: String, value: Boolean) {
@@ -127,28 +173,51 @@ fun SwitchDeviceScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Container for Switches
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                switchConfigs.forEach { config ->
-                    val isOn = switchStates[config.code] == true
-                    
-                    // Responsive sizing
-                    // OLD Logic: val weight = if (switchConfigs.size > 1) 1f else 0f
-                    // NEW Logic: Always fixed width, centered by parent Row arrangement
-                    
-                    ModernSwitchPanel(
-                        label = config.label,
-                        isOn = isOn,
-                        onClick = { sendCommand(config.code, !isOn) },
-                        modifier = Modifier
-                            .width(120.dp) // Fixed small width as requested ("kecil aja")
+            when {
+                isLoading -> {
+                    CircularProgressIndicator()
+                }
+                errorMessage != null -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Text(
+                            text = errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+                switchConfigs.isEmpty() -> {
+                    Text(
+                        text = "No switches available",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyLarge
                     )
+                }
+                else -> {
+                    // Container for Switches
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        switchConfigs.forEach { config ->
+                            val isOn = switchStates[config.code] == true
+                            
+                            ModernSwitchPanel(
+                                label = config.label,
+                                isOn = isOn,
+                                onClick = { sendCommand(config.code, !isOn) },
+                                modifier = Modifier
+                                    .width(120.dp) // Fixed small width as requested ("kecil aja")
+                            )
+                        }
+                    }
                 }
             }
         }
