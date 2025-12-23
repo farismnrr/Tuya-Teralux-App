@@ -17,16 +17,19 @@ import (
 // TuyaDeviceControlUseCase handles the business logic for controlling Tuya devices.
 // It supports both standard device control (switches, lights) and specialized IR air conditioner control.
 type TuyaDeviceControlUseCase struct {
-	service *services.TuyaDeviceService
+	service          *services.TuyaDeviceService
+	deviceStateUC    *DeviceStateUseCase
 }
 
 // NewTuyaDeviceControlUseCase initializes a new TuyaDeviceControlUseCase.
 //
 // param service The TuyaDeviceService used for API communication.
+// param deviceStateUC The DeviceStateUseCase for saving device states.
 // return *TuyaDeviceControlUseCase A pointer to the initialized usecase.
-func NewTuyaDeviceControlUseCase(service *services.TuyaDeviceService) *TuyaDeviceControlUseCase {
+func NewTuyaDeviceControlUseCase(service *services.TuyaDeviceService, deviceStateUC *DeviceStateUseCase) *TuyaDeviceControlUseCase {
 	return &TuyaDeviceControlUseCase{
-		service: service,
+		service:       service,
+		deviceStateUC: deviceStateUC,
 	}
 }
 
@@ -245,6 +248,16 @@ func (uc *TuyaDeviceControlUseCase) SendIRACCommand(accessToken, infraredID, rem
 		return false, fmt.Errorf("tuya IR API failed: %s (code: %d)", resp.Msg, resp.Code)
 	}
 
+	// Save state after successful command
+	if uc.deviceStateUC != nil {
+		stateCommands := []dtos.DeviceStateCommandDTO{
+			{Code: code, Value: value},
+		}
+		if err := uc.deviceStateUC.SaveDeviceState(remoteID, stateCommands); err != nil {
+			utils.LogWarn("Failed to save device state for %s: %v", remoteID, err)
+		}
+	}
+
 	return resp.Result, nil
 }
 
@@ -375,6 +388,20 @@ func (uc *TuyaDeviceControlUseCase) SendCommand(accessToken, deviceID string, co
 		}
 		
 		return false, fmt.Errorf("tuya API failed: %s (code: %d)", resp.Msg, resp.Code)
+	}
+
+	// Save state after successful command
+	if uc.deviceStateUC != nil {
+		stateCommands := make([]dtos.DeviceStateCommandDTO, len(commands))
+		for i, cmd := range commands {
+			stateCommands[i] = dtos.DeviceStateCommandDTO{
+				Code:  cmd.Code,
+				Value: cmd.Value,
+			}
+		}
+		if err := uc.deviceStateUC.SaveDeviceState(deviceID, stateCommands); err != nil {
+			utils.LogWarn("Failed to save device state for %s: %v", deviceID, err)
+		}
 	}
 
 	return resp.Result, nil

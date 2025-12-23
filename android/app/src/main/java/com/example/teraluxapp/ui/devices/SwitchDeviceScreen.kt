@@ -38,6 +38,7 @@ fun SwitchDeviceScreen(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     // Dynamic switch configuration from device status
     var switchConfigs by remember { mutableStateOf<List<SwitchConfig>>(emptyList()) }
@@ -45,8 +46,6 @@ fun SwitchDeviceScreen(
     var isOnline by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { com.example.teraluxapp.utils.DevicePreferences(context) }
 
 
     // Helper function to check if status is a valid switch control
@@ -67,12 +66,33 @@ fun SwitchDeviceScreen(
         return "Switch $num"
     }
 
-    // Helper function to initialize switch states
+    // Helper function to initialize switch states from device status
     fun initializeSwitchStates(switches: List<com.example.teraluxapp.data.model.DeviceStatus>) {
         switches.forEach { status ->
             val isOn = status.value.toString().toBoolean()
             switchStates[status.code] = isOn
-            prefs.saveGenericSwitchState(deviceId, status.code, isOn)
+        }
+    }
+    
+    // Load state from backend
+    suspend fun loadStateFromBackend() {
+        try {
+            val response = RetrofitClient.instance.getDeviceState("Bearer $token", deviceId)
+            if (response.isSuccessful && response.body()?.status == true) {
+                val state = response.body()?.data
+                state?.last_commands?.forEach { cmd ->
+                    // Backend can send as Boolean or Number (0/1)
+                    val switchValue = when (val v = cmd.value) {
+                        is Boolean -> v
+                        is Number -> v.toInt() == 1
+                        else -> false
+                    }
+                    switchStates[cmd.code] = switchValue
+                }
+                android.util.Log.d("SwitchDevice", "Loaded state from backend: ${state?.last_commands?.size} commands")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SwitchDevice", "Failed to load state: ${e.message}")
         }
     }
 
@@ -110,8 +130,11 @@ fun SwitchDeviceScreen(
                 )
             }
             
-            // Initialize switch states
+            // Initialize switch states from device status
             initializeSwitchStates(switches)
+            
+            // Load saved state from backend (overrides device status)
+            loadStateFromBackend()
             
         } catch (e: Exception) {
             e.printStackTrace()
@@ -122,17 +145,46 @@ fun SwitchDeviceScreen(
     }
 
     fun sendCommand(code: String, value: Boolean) {
-        if (!isOnline) return // Allow command only if online? Or just visual feedback.
+        if (!isOnline) {
+            scope.launch {
+                snackbarHostState.showSnackbar("Device is offline")
+            }
+            return
+        }
+        
+        // Optimistic update
         switchStates[code] = value
-        prefs.saveGenericSwitchState(deviceId, code, value)
+        
         scope.launch {
             try {
-                RetrofitClient.instance.sendDeviceCommand("Bearer $token", deviceId, Command(code, value))
-            } catch (e: Exception) { e.printStackTrace() }
+                // Send command to device
+                val cmdResponse = RetrofitClient.instance.sendDeviceCommand("Bearer $token", deviceId, Command(code, value))
+                
+                if (cmdResponse.isSuccessful && cmdResponse.body()?.status == true) {
+                    // Save ALL switch states to backend (not just the one that changed)
+                    val allSwitchCommands = switchStates.map { (switchCode, switchValue) ->
+                        com.example.teraluxapp.data.network.StateCommand(switchCode, switchValue)
+                    }
+                    val stateRequest = com.example.teraluxapp.data.network.SaveDeviceStateRequest(
+                        commands = allSwitchCommands
+                    )
+                    RetrofitClient.instance.saveDeviceState("Bearer $token", deviceId, stateRequest)
+                } else {
+                    // Revert on failure
+                    switchStates[code] = !value
+                    snackbarHostState.showSnackbar("Command failed")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Revert on error
+                switchStates[code] = !value
+                snackbarHostState.showSnackbar("Error: ${e.message}")
+            }
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

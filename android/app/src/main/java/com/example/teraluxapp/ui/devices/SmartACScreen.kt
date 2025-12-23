@@ -64,10 +64,35 @@ fun SmartACScreen(
     val windLabels = listOf("Auto", "Low", "Medium", "High")
     
     var rawStatus by remember { mutableStateOf("Loading...") }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Persistent Storage
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { com.example.teraluxapp.utils.DevicePreferences(context) }
+    // Load state from backend
+    suspend fun loadStateFromBackend() {
+        try {
+            val response = RetrofitClient.instance.getDeviceState("Bearer $token", deviceId)
+            if (response.isSuccessful && response.body()?.status == true) {
+                val state = response.body()?.data
+                state?.last_commands?.forEach { cmd ->
+                    when (cmd.code.lowercase()) {
+                        "power" -> {
+                            // Backend sends as float64 (Double in Kotlin), not Int
+                            val powerValue = when (val v = cmd.value) {
+                                is Number -> v.toInt() == 1
+                                is Boolean -> v
+                                else -> false
+                            }
+                            isOn = powerValue
+                        }
+                        "temp" -> temp = (cmd.value as? Number)?.toInt() ?: temp
+                        "mode" -> modeIndex = (cmd.value as? Number)?.toInt() ?: modeIndex
+                        "wind" -> windIndex = (cmd.value as? Number)?.toInt() ?: windIndex
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     // Fetch initial state
     LaunchedEffect(Unit) {
@@ -84,15 +109,8 @@ fun SmartACScreen(
                     android.util.Log.d("SmartACScreen", "Status: ${it.code} = ${it.value}") 
                 }
                 
-                // Check if status is empty (stateless IR)
-                if (statuses.isNullOrEmpty()) {
-                    val cached = prefs.getACState(deviceId)
-                    isOn = cached.isOn
-                    temp = cached.temp
-                    modeIndex = cached.mode
-                    windIndex = cached.speed
-                    android.util.Log.d("SmartACScreen", "Loaded cached state: $cached")
-                } else {
+                // Parse device status if available
+                if (!statuses.isNullOrEmpty()) {
                     statuses.forEach { status ->
                         val code = status.code.lowercase()
                         when (code) {
@@ -124,64 +142,71 @@ fun SmartACScreen(
                             }
                         }
                     }
-                    // Save loaded state to cache
-                    prefs.saveACState(deviceId, isOn, temp, modeIndex, windIndex)
                 }
+                
+                // Load saved state from backend (overrides device status)
+                loadStateFromBackend()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            // Fallback to cache on error
-            val cached = prefs.getACState(deviceId)
-            isOn = cached.isOn
-            temp = cached.temp
-            modeIndex = cached.mode
-            windIndex = cached.speed
         }
     }
 
     // Send Command (IR endpoint with client-side mapping)
     val sendIRCommand = { code: String, value: Any ->
-        // Optimistic Save
-        prefs.saveACState(deviceId, isOn, temp, modeIndex, windIndex)
+        if (!isDeviceOnline) {
+            scope.launch {
+                snackbarHostState.showSnackbar("Device is offline")
+            }
+        } else {
+            scope.launch {
+                isProcessing = true
+                try {
+                    // Convert value to Int for IR API
+                    val intValue = when (value) {
+                        is Boolean -> if (value) 1 else 0
+                        is Int -> value
+                        else -> 0
+                    }
 
-        scope.launch {
-            isProcessing = true
-            try {
-                // For IR devices, we still use the IR endpoint but with proper remote_id
-                // deviceId = remote_id (the AC remote paired to the hub)
-                // infraredId = the Smart IR Hub ID
-                
-                // Convert value to Int for IR API
-                val intValue = when (value) {
-                    is Boolean -> if (value) 1 else 0
-                    is Int -> value
-                    else -> 0
+                    android.util.Log.d("SmartACScreen", "Sending IR Command: $code = $intValue to remote $deviceId via hub $infraredId")
+                    
+                    val request = IRACCommandRequest(
+                        remote_id = deviceId,  // This is the AC remote ID
+                        code = code,
+                        value = intValue
+                    )
+                    val response = RetrofitClient.instance.sendIRACCommand("Bearer $token", infraredId, request)
+                    
+                    if (response.isSuccessful && response.body()?.status == true) {
+                        android.util.Log.d("SmartACScreen", "Command Success")
+                        
+                        // Save state to backend
+                        val stateCommands = mutableListOf<com.example.teraluxapp.data.network.StateCommand>()
+                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("power", if (isOn) 1 else 0))
+                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("temp", temp))
+                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("mode", modeIndex))
+                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("wind", windIndex))
+                        
+                        val stateRequest = com.example.teraluxapp.data.network.SaveDeviceStateRequest(commands = stateCommands)
+                        RetrofitClient.instance.saveDeviceState("Bearer $token", deviceId, stateRequest)
+                    } else {
+                        android.util.Log.e("SmartACScreen", "Command Failed: ${response.code()}")
+                        snackbarHostState.showSnackbar("Command failed")
+                    }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("Error: ${e.message}")
+                } finally {
+                    isProcessing = false
                 }
-
-                android.util.Log.d("SmartACScreen", "Sending IR Command: $code = $intValue to remote $deviceId via hub $infraredId")
-                
-                val request = IRACCommandRequest(
-                    remote_id = deviceId,  // This is the AC remote ID
-                    code = code,
-                    value = intValue
-                )
-                val response = RetrofitClient.instance.sendIRACCommand("Bearer $token", infraredId, request)
-                
-                if (response.isSuccessful && response.body()?.status == true) {
-                     android.util.Log.d("SmartACScreen", "Command Success")
-                } else {
-                     android.util.Log.e("SmartACScreen", "Command Failed: ${response.code()}")
-                }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isProcessing = false
             }
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { 

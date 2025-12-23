@@ -57,3 +57,22 @@ type TuyaDevicesResponseDTO struct {
 type TuyaDeviceResponseDTO struct {
 	Device TuyaDeviceDTO `json:"device"`
 }
+
+// DeviceStateDTO represents the device state for API consumers
+type DeviceStateDTO struct {
+	DeviceID     string                   `json:"device_id"`
+	LastCommands []DeviceStateCommandDTO  `json:"last_commands"`
+	UpdatedAt    int64                    `json:"updated_at"`
+}
+
+// DeviceStateCommandDTO represents a single command in the device state
+type DeviceStateCommandDTO struct {
+	Code  string      `json:"code" binding:"required"`
+	Value interface{} `json:"value" binding:"required"`
+}
+
+// SaveDeviceStateRequestDTO represents the request body for saving device state
+type SaveDeviceStateRequestDTO struct {
+	Commands []DeviceStateCommandDTO `json:"commands" binding:"required"`
+}
+

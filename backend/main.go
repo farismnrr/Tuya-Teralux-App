@@ -75,9 +75,12 @@ func main() {
 
 	tuyaDeviceService := services.NewTuyaDeviceService()
 
-	tuyaGetAllDevicesUseCase := usecases.NewTuyaGetAllDevicesUseCase(tuyaDeviceService, badgerService)
+	// Initialize Device State UseCase (needed by other use cases)
+	deviceStateUseCase := usecases.NewDeviceStateUseCase(badgerService)
+
+	tuyaGetAllDevicesUseCase := usecases.NewTuyaGetAllDevicesUseCase(tuyaDeviceService, badgerService, deviceStateUseCase)
 	tuyaGetDeviceByIDUseCase := usecases.NewTuyaGetDeviceByIDUseCase(tuyaDeviceService, badgerService)
-	tuyaDeviceControlUseCase := usecases.NewTuyaDeviceControlUseCase(tuyaDeviceService)
+	tuyaDeviceControlUseCase := usecases.NewTuyaDeviceControlUseCase(tuyaDeviceService, deviceStateUseCase)
 	tuyaSensorUseCase := usecases.NewTuyaSensorUseCase(tuyaGetDeviceByIDUseCase)
 
 	tuyaAuthController := controllers.NewTuyaAuthController(tuyaAuthUseCase)
@@ -86,6 +89,7 @@ func main() {
 	tuyaDeviceControlController := controllers.NewTuyaDeviceControlController(tuyaDeviceControlUseCase)
 	tuyaSensorController := controllers.NewTuyaSensorController(tuyaSensorUseCase)
 	cacheController := controllers.NewCacheController(badgerService)
+	deviceStateController := controllers.NewDeviceStateController(deviceStateUseCase)
 
 	authGroup := router.Group("/")
 	authGroup.Use(middlewares.ApiKeyMiddleware())
@@ -98,6 +102,7 @@ func main() {
 		routes.SetupTuyaDeviceRoutes(protected, tuyaGetAllDevicesController, tuyaGetDeviceByIDController, tuyaSensorController)
 		routes.SetupTuyaControlRoutes(protected, tuyaDeviceControlController)
 		routes.SetupCacheRoutes(protected, cacheController)
+		routes.SetupDeviceStateRoutes(protected, deviceStateController)
 	}
 	
 	utils.LogInfo("Server starting on :8080")

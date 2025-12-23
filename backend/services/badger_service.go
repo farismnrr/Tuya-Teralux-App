@@ -133,10 +133,71 @@ func (s *BadgerService) ClearWithPrefix(prefix string) error {
 	return s.db.DropPrefix([]byte(prefix))
 }
 
-// FlushAll removes all data from the database.
-// WARNING: This action is irreversible.
+// SetPersistent stores a key-value pair in the database WITHOUT a Time-To-Live (TTL).
+// This is used for persistent data that should survive cache flushes, such as device states.
 //
-// return error An error if the drop all operation fails.
+// param key The unique identifier for the data.
+// param value The byte array data to store.
+// return error An error if the write operation fails.
+// @throws error If the transaction fails to commit.
+func (s *BadgerService) SetPersistent(key string, value []byte) error {
+	err := s.db.Update(func(txn *badger.Txn) error {
+		// No TTL - data persists indefinitely
+		return txn.Set([]byte(key), value)
+	})
+	if err != nil {
+		utils.LogError("BadgerService: failed to set persistent key %s: %v", key, err)
+		return err
+	}
+	utils.LogDebug("BadgerService: Set persistent key '%s' (no TTL)", key)
+	return nil
+}
+
+// GetAllKeysWithPrefix retrieves all keys that start with the specified prefix.
+// This is useful for cleanup operations or listing related items.
+//
+// param prefix The string pattern to match at the beginning of keys.
+// return []string A slice of all matching keys.
+// return error An error if the iteration fails.
+func (s *BadgerService) GetAllKeysWithPrefix(prefix string) ([]string, error) {
+	var keys []string
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false // We only need keys, not values
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		prefixBytes := []byte(prefix)
+		for it.Seek(prefixBytes); it.ValidForPrefix(prefixBytes); it.Next() {
+			item := it.Item()
+			key := string(item.Key())
+			keys = append(keys, key)
+		}
+		return nil
+	})
+
+	if err != nil {
+		utils.LogError("BadgerService: failed to get keys with prefix %s: %v", prefix, err)
+		return nil, err
+	}
+
+	utils.LogDebug("BadgerService: Found %d keys with prefix '%s'", len(keys), prefix)
+	return keys, nil
+}
+
+// FlushAll removes all CACHE data from the database (keys with "cache:" prefix).
+// Device state and other persistent data (without "cache:" prefix) are preserved.
+// This is a selective flush operation, not a complete database wipe.
+//
+// return error An error if the drop operation fails.
 func (s *BadgerService) FlushAll() error {
-	return s.db.DropAll()
+	// Only clear keys with "cache:" prefix
+	cachePrefix := "cache:"
+	err := s.db.DropPrefix([]byte(cachePrefix))
+	if err != nil {
+		utils.LogError("BadgerService: failed to flush cache: %v", err)
+		return err
+	}
+	utils.LogInfo("BadgerService: Flushed all cache data (preserved persistent data)")
+	return nil
 }

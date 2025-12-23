@@ -16,19 +16,22 @@ import (
 // TuyaGetAllDevicesUseCase orchestrates the retrieval and aggregation of device data.
 // It combines the user's device list, individual device specifications, and real-time status.
 type TuyaGetAllDevicesUseCase struct {
-	service *services.TuyaDeviceService
-	cache   *services.BadgerService
+	service       *services.TuyaDeviceService
+	cache         *services.BadgerService
+	deviceStateUC *DeviceStateUseCase
 }
 
 // NewTuyaGetAllDevicesUseCase initializes a new TuyaGetAllDevicesUseCase.
 //
 // param service The TuyaDeviceService used for API interactions.
 // param cache The BadgerService used for caching device lists.
+// param deviceStateUC The DeviceStateUseCase for cleaning up orphaned states.
 // return *TuyaGetAllDevicesUseCase A pointer to the initialized usecase.
-func NewTuyaGetAllDevicesUseCase(service *services.TuyaDeviceService, cache *services.BadgerService) *TuyaGetAllDevicesUseCase {
+func NewTuyaGetAllDevicesUseCase(service *services.TuyaDeviceService, cache *services.BadgerService, deviceStateUC *DeviceStateUseCase) *TuyaGetAllDevicesUseCase {
 	return &TuyaGetAllDevicesUseCase{
-		service: service,
-		cache:   cache,
+		service:       service,
+		cache:         cache,
+		deviceStateUC: deviceStateUC,
 	}
 }
 
@@ -54,7 +57,7 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string, page,
 	config := utils.GetConfig()
 
 	// 1. Try Cache First
-	cacheKey := fmt.Sprintf("tuya_devices_%s", uid)
+	cacheKey := fmt.Sprintf("cache:devices:%s", uid)
 	var deviceDTOs []dtos.TuyaDeviceDTO
 
 	cachedData, err := uc.cache.Get(cacheKey)
@@ -251,6 +254,25 @@ func (uc *TuyaGetAllDevicesUseCase) GetAllDevices(accessToken, uid string, page,
 			utils.LogDebug("GetAllDevices: Saved %d devices to cache for uid %s", len(deviceDTOs), uid)
 		} else {
 			utils.LogError("GetAllDevices: Failed to marshal devices for cache: %v", err)
+		}
+
+		// 4. Cleanup orphaned device states
+		if uc.deviceStateUC != nil {
+			var allDeviceIDs []string
+			for _, dev := range deviceDTOs {
+				allDeviceIDs = append(allDeviceIDs, dev.ID)
+				// Also include remote IDs for merged devices (Mode 2)
+				if dev.RemoteID != "" {
+					allDeviceIDs = append(allDeviceIDs, dev.RemoteID)
+				}
+				// Include collection IDs (Mode 0)
+				for _, coll := range dev.Collections {
+					allDeviceIDs = append(allDeviceIDs, coll.ID)
+				}
+			}
+			if err := uc.deviceStateUC.CleanupOrphanedStates(allDeviceIDs); err != nil {
+				utils.LogWarn("GetAllDevices: Failed to cleanup orphaned states: %v", err)
+			}
 		}
 	}
 
