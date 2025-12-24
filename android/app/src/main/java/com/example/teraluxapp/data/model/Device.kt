@@ -7,7 +7,9 @@ data class Device(
     @SerializedName("remote_id") val remoteId: String?,  // For IR devices
     @SerializedName("name") val name: String,
     @SerializedName("category") val category: String,
+    @SerializedName("remote_category") val remoteCategory: String?,  // For merged IR devices
     @SerializedName("product_name") val productName: String,
+    @SerializedName("remote_product_name") val remoteProductName: String?,  // For merged IR devices
     @SerializedName("online") val online: Boolean,
     @SerializedName("icon") val icon: String,
     @SerializedName("status") val status: List<DeviceStatus>?,
@@ -23,7 +25,6 @@ data class DeviceStatus(
 )
 
 data class DeviceResponse(
-
     @SerializedName("devices") val devices: List<Device>,
     @SerializedName("total_devices") val totalDevices: Int,
     @SerializedName("current_page_count") val currentPageCount: Int

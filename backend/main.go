@@ -2,12 +2,16 @@ package main
 
 import (
 	"net/url"
-	"teralux_app/controllers"
-	"teralux_app/middlewares"
-	"teralux_app/routes"
-	"teralux_app/services"
-	"teralux_app/usecases"
-	"teralux_app/utils"
+	common_controllers "teralux_app/domain/common/controllers"
+	tuya_controllers "teralux_app/domain/tuya/controllers"
+	"teralux_app/domain/common/infrastructure"
+	"teralux_app/domain/common/middlewares"
+	common_routes "teralux_app/domain/common/routes"
+	tuya_routes "teralux_app/domain/tuya/routes"
+	"teralux_app/domain/common/infrastructure/persistence"
+	"teralux_app/domain/tuya/services"
+	"teralux_app/domain/tuya/usecases"
+	"teralux_app/domain/common/utils"
 
 	"github.com/gin-gonic/gin"
 
@@ -39,6 +43,24 @@ import (
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
+
+// @tag.name 01. Auth
+// @tag.description Authentication endpoints
+
+// @tag.name 02. Devices
+// @tag.description Device management endpoints
+
+// @tag.name 03. Device Control
+// @tag.description Device control endpoints
+
+// @tag.name 04. Device Sensor
+// @tag.description Sensor data endpoints
+
+// @tag.name 05. Flush
+// @tag.description Cache management endpoints
+
+// @tag.name 06. Health
+// @tag.description Health check endpoints
 func main() {
 	utils.LoadConfig()
 
@@ -52,7 +74,20 @@ func main() {
 		}
 	}
 
+	// Initialize database connection
+	_, err := infrastructure.InitDB()
+	if err != nil {
+		utils.LogInfo("Warning: Failed to initialize database: %v", err)
+	} else {
+		defer infrastructure.CloseDB()
+		utils.LogInfo("Database initialized successfully")
+	}
+
 	router := gin.Default()
+
+	// Health check endpoint
+	healthController := common_controllers.NewHealthController()
+	router.GET("/health", healthController.CheckHealth)
 
 	router.GET("/swagger/*any", func(c *gin.Context) {
 		if c.Param("any") == "" || c.Param("any") == "/" || c.Param("any") == "/index.html" {
@@ -63,7 +98,7 @@ func main() {
 		}
 	})
 
-	badgerService, err := services.NewBadgerService("./tmp/badger")
+	badgerService, err := persistence.NewBadgerService("./tmp/badger")
 	if err != nil {
 		utils.LogInfo("Warning: Failed to initialize BadgerDB: %v", err)
 	} else {
@@ -79,30 +114,28 @@ func main() {
 	deviceStateUseCase := usecases.NewDeviceStateUseCase(badgerService)
 
 	tuyaGetAllDevicesUseCase := usecases.NewTuyaGetAllDevicesUseCase(tuyaDeviceService, badgerService, deviceStateUseCase)
-	tuyaGetDeviceByIDUseCase := usecases.NewTuyaGetDeviceByIDUseCase(tuyaDeviceService, badgerService)
-	tuyaDeviceControlUseCase := usecases.NewTuyaDeviceControlUseCase(tuyaDeviceService, deviceStateUseCase)
+	tuyaGetDeviceByIDUseCase := usecases.NewTuyaGetDeviceByIDUseCase(tuyaDeviceService, badgerService, deviceStateUseCase)
+	tuyaDeviceControlUseCase := usecases.NewTuyaDeviceControlUseCase(tuyaDeviceService, deviceStateUseCase, badgerService)
 	tuyaSensorUseCase := usecases.NewTuyaSensorUseCase(tuyaGetDeviceByIDUseCase)
 
-	tuyaAuthController := controllers.NewTuyaAuthController(tuyaAuthUseCase)
-	tuyaGetAllDevicesController := controllers.NewTuyaGetAllDevicesController(tuyaGetAllDevicesUseCase)
-	tuyaGetDeviceByIDController := controllers.NewTuyaGetDeviceByIDController(tuyaGetDeviceByIDUseCase)
-	tuyaDeviceControlController := controllers.NewTuyaDeviceControlController(tuyaDeviceControlUseCase)
-	tuyaSensorController := controllers.NewTuyaSensorController(tuyaSensorUseCase)
-	cacheController := controllers.NewCacheController(badgerService)
-	deviceStateController := controllers.NewDeviceStateController(deviceStateUseCase)
+	tuyaAuthController := tuya_controllers.NewTuyaAuthController(tuyaAuthUseCase)
+	tuyaGetAllDevicesController := tuya_controllers.NewTuyaGetAllDevicesController(tuyaGetAllDevicesUseCase)
+	tuyaGetDeviceByIDController := tuya_controllers.NewTuyaGetDeviceByIDController(tuyaGetDeviceByIDUseCase)
+	tuyaDeviceControlController := tuya_controllers.NewTuyaDeviceControlController(tuyaDeviceControlUseCase)
+	tuyaSensorController := tuya_controllers.NewTuyaSensorController(tuyaSensorUseCase)
+	cacheController := common_controllers.NewCacheController(badgerService)
 
 	authGroup := router.Group("/")
 	authGroup.Use(middlewares.ApiKeyMiddleware())
-	routes.SetupTuyaAuthRoutes(authGroup, tuyaAuthController)
+	tuya_routes.SetupTuyaAuthRoutes(authGroup, tuyaAuthController)
 
 	protected := router.Group("/")
 	protected.Use(middlewares.AuthMiddleware())
 	protected.Use(middlewares.TuyaErrorMiddleware())
 	{
-		routes.SetupTuyaDeviceRoutes(protected, tuyaGetAllDevicesController, tuyaGetDeviceByIDController, tuyaSensorController)
-		routes.SetupTuyaControlRoutes(protected, tuyaDeviceControlController)
-		routes.SetupCacheRoutes(protected, cacheController)
-		routes.SetupDeviceStateRoutes(protected, deviceStateController)
+		tuya_routes.SetupTuyaDeviceRoutes(protected, tuyaGetAllDevicesController, tuyaGetDeviceByIDController, tuyaSensorController)
+		tuya_routes.SetupTuyaControlRoutes(protected, tuyaDeviceControlController)
+		common_routes.SetupCacheRoutes(protected, cacheController)
 	}
 	
 	utils.LogInfo("Server starting on :8080")

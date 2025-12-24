@@ -1,6 +1,7 @@
-.env
 tmp/
+scripts/
 
+.env
 main
 teralux_app
 tmp_build

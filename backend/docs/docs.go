@@ -39,7 +39,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cache"
+                    "05. Flush"
                 ],
                 "summary": "Flush all cache",
                 "responses": {
@@ -73,7 +73,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "01. Auth"
                 ],
                 "summary": "Authenticate with Tuya",
                 "responses": {
@@ -111,7 +111,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE: 0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name.",
+                "description": "Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE: 0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name. For infrared_ac devices, the status array is populated with saved device state (power, temp, mode, wind) or default values if no state exists.",
                 "consumes": [
                     "application/json"
                 ],
@@ -119,7 +119,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Devices"
+                    "02. Devices"
                 ],
                 "summary": "Get All Devices",
                 "parameters": [
@@ -177,7 +177,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves details of a specific device by its ID",
+                "description": "Retrieves details of a specific device by its ID. Response includes last_commands field containing the last control commands sent to the device.",
                 "consumes": [
                     "application/json"
                 ],
@@ -185,7 +185,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Devices"
+                    "02. Devices"
                 ],
                 "summary": "Get Device by ID",
                 "parameters": [
@@ -246,7 +246,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Device Control"
+                    "03. Device Control"
                 ],
                 "summary": "Send IR AC Command",
                 "parameters": [
@@ -304,7 +304,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Device Control"
+                    "03. Device Control"
                 ],
                 "summary": "Send Command to Device",
                 "parameters": [
@@ -362,7 +362,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Sensors"
+                    "04. Device Sensor"
                 ],
                 "summary": "Get Sensor Data",
                 "parameters": [
@@ -403,6 +403,32 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/dtos.StandardResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the application and database are healthy",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Health check endpoint",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -523,9 +549,6 @@ const docTemplate = `{
                 "remote_id": {
                     "type": "string"
                 },
-                "remote_name": {
-                    "type": "string"
-                },
                 "remote_product_name": {
                     "type": "string"
                 },
@@ -605,7 +628,33 @@ const docTemplate = `{
             "name": "Authorization",
             "in": "header"
         }
-    }
+    },
+    "tags": [
+        {
+            "description": "Authentication endpoints",
+            "name": "01. Auth"
+        },
+        {
+            "description": "Device management endpoints",
+            "name": "02. Devices"
+        },
+        {
+            "description": "Device control endpoints",
+            "name": "03. Device Control"
+        },
+        {
+            "description": "Sensor data endpoints",
+            "name": "04. Device Sensor"
+        },
+        {
+            "description": "Cache management endpoints",
+            "name": "05. Flush"
+        },
+        {
+            "description": "Health check endpoints",
+            "name": "06. Health"
+        }
+    ]
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it

@@ -48,6 +48,9 @@ const CustomSwaggerHTML = `<!DOCTYPE html>
           url: "doc.json",
           dom_id: '#swagger-ui',
           deepLinking: true,
+          defaultModelsExpandDepth: -1,
+          defaultModelExpandDepth: 3,
+          displayRequestDuration: true,
           presets: [
             SwaggerUIBundle.presets.apis,
             SwaggerUIStandalonePreset

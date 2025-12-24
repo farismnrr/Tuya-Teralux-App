@@ -162,6 +162,7 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                                 // For IR devices, use remote_id as deviceId and id as gatewayId
                                 val actualDeviceId = device.remoteId ?: device.id
                                 val actualGatewayId = if (device.remoteId != null) device.id else device.gatewayId
+                                val actualCategory = device.remoteCategory ?: device.category
                                 DeviceItem(
                                     device = device,
                                     modifier = Modifier.weight(1f),
@@ -171,7 +172,7 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                                                 snackbarHostState.showSnackbar("Device is offline and cannot be controlled")
                                             }
                                         } else {
-                                            onDeviceClick(actualDeviceId, device.category, device.name, actualGatewayId)
+                                            onDeviceClick(actualDeviceId, actualCategory, device.name, actualGatewayId)
                                         }
                                     }
                                 )
@@ -194,6 +195,7 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                                 // For IR devices, use remote_id as deviceId and id as gatewayId
                                 val actualDeviceId = device.remoteId ?: device.id
                                 val actualGatewayId = if (device.remoteId != null) device.id else device.gatewayId
+                                val actualCategory = device.remoteCategory ?: device.category
                                 DeviceItem(
                                     device = device,
                                     modifier = Modifier.weight(1f),
@@ -203,7 +205,7 @@ fun DeviceListScreen(token: String, uid: String, onDeviceClick: (deviceId: Strin
                                                 snackbarHostState.showSnackbar("Device is offline and cannot be controlled")
                                             }
                                         } else {
-                                            onDeviceClick(actualDeviceId, device.category, device.name, actualGatewayId)
+                                            onDeviceClick(actualDeviceId, actualCategory, device.name, actualGatewayId)
                                         }
                                     }
                                 )

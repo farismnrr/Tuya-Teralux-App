@@ -74,28 +74,6 @@ fun SwitchDeviceScreen(
         }
     }
     
-    // Load state from backend
-    suspend fun loadStateFromBackend() {
-        try {
-            val response = RetrofitClient.instance.getDeviceState("Bearer $token", deviceId)
-            if (response.isSuccessful && response.body()?.status == true) {
-                val state = response.body()?.data
-                state?.last_commands?.forEach { cmd ->
-                    // Backend can send as Boolean or Number (0/1)
-                    val switchValue = when (val v = cmd.value) {
-                        is Boolean -> v
-                        is Number -> v.toInt() == 1
-                        else -> false
-                    }
-                    switchStates[cmd.code] = switchValue
-                }
-                android.util.Log.d("SwitchDevice", "Loaded state from backend: ${state?.last_commands?.size} commands")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("SwitchDevice", "Failed to load state: ${e.message}")
-        }
-    }
-
     // Init & Sync
     LaunchedEffect(deviceId) {
         isLoading = true
@@ -133,8 +111,8 @@ fun SwitchDeviceScreen(
             // Initialize switch states from device status
             initializeSwitchStates(switches)
             
-            // Load saved state from backend (overrides device status)
-            loadStateFromBackend()
+            // State is already merged into status by backend, no additional loading needed
+            android.util.Log.d("SwitchDevice", "Loaded state from device.status: ${switches.size} switches")
             
         } catch (e: Exception) {
             e.printStackTrace()
@@ -157,18 +135,10 @@ fun SwitchDeviceScreen(
         
         scope.launch {
             try {
-                // Send command to device
                 val cmdResponse = RetrofitClient.instance.sendDeviceCommand("Bearer $token", deviceId, Command(code, value))
                 
                 if (cmdResponse.isSuccessful && cmdResponse.body()?.status == true) {
-                    // Save ALL switch states to backend (not just the one that changed)
-                    val allSwitchCommands = switchStates.map { (switchCode, switchValue) ->
-                        com.example.teraluxapp.data.network.StateCommand(switchCode, switchValue)
-                    }
-                    val stateRequest = com.example.teraluxapp.data.network.SaveDeviceStateRequest(
-                        commands = allSwitchCommands
-                    )
-                    RetrofitClient.instance.saveDeviceState("Bearer $token", deviceId, stateRequest)
+                    // Backend auto-saves state, no manual save needed
                 } else {
                     // Revert on failure
                     switchStates[code] = !value

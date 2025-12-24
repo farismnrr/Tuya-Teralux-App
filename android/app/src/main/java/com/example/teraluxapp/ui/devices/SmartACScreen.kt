@@ -66,33 +66,7 @@ fun SmartACScreen(
     var rawStatus by remember { mutableStateOf("Loading...") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Load state from backend
-    suspend fun loadStateFromBackend() {
-        try {
-            val response = RetrofitClient.instance.getDeviceState("Bearer $token", deviceId)
-            if (response.isSuccessful && response.body()?.status == true) {
-                val state = response.body()?.data
-                state?.last_commands?.forEach { cmd ->
-                    when (cmd.code.lowercase()) {
-                        "power" -> {
-                            // Backend sends as float64 (Double in Kotlin), not Int
-                            val powerValue = when (val v = cmd.value) {
-                                is Number -> v.toInt() == 1
-                                is Boolean -> v
-                                else -> false
-                            }
-                            isOn = powerValue
-                        }
-                        "temp" -> temp = (cmd.value as? Number)?.toInt() ?: temp
-                        "mode" -> modeIndex = (cmd.value as? Number)?.toInt() ?: modeIndex
-                        "wind" -> windIndex = (cmd.value as? Number)?.toInt() ?: windIndex
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+
 
     // Fetch initial state
     LaunchedEffect(Unit) {
@@ -114,38 +88,21 @@ fun SmartACScreen(
                     statuses.forEach { status ->
                         val code = status.code.lowercase()
                         when (code) {
-                            "switch", "power" -> isOn = status.value.toString().toBoolean()
-                            "temp_set", "t", "temp" -> {
-                                val t = status.value.toString().toDoubleOrNull()?.toInt()
-                                if (t != null) temp = t
-                            }
-                            "mode" -> {
-                                val modeStr = status.value.toString().lowercase()
-                                modeIndex = when (modeStr) {
-                                    "cool", "cold" -> 0
-                                    "heat", "hot" -> 1
-                                    "auto" -> 2
-                                    "fan", "wind" -> 3
-                                    "dry", "wet" -> 4
-                                    else -> 0
+                            "power" -> {
+                                // Backend sends as integer (0 or 1)
+                                val powerValue = when (val v = status.value) {
+                                    is Number -> v.toInt() == 1
+                                    is Boolean -> v
+                                    else -> false
                                 }
+                                isOn = powerValue
                             }
-                            "fan_speed_enum", "wind" -> {
-                                val fanStr = status.value.toString().lowercase()
-                                windIndex = when (fanStr) {
-                                    "auto" -> 0
-                                    "low" -> 1
-                                    "medium" -> 2
-                                    "high" -> 3
-                                    else -> 0
-                                }
-                            }
+                            "temp" -> temp = (status.value as? Number)?.toInt() ?: temp
+                            "mode" -> modeIndex = (status.value as? Number)?.toInt() ?: modeIndex
+                            "wind" -> windIndex = (status.value as? Number)?.toInt() ?: windIndex
                         }
                     }
                 }
-                
-                // Load saved state from backend (overrides device status)
-                loadStateFromBackend()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -180,16 +137,6 @@ fun SmartACScreen(
                     
                     if (response.isSuccessful && response.body()?.status == true) {
                         android.util.Log.d("SmartACScreen", "Command Success")
-                        
-                        // Save state to backend
-                        val stateCommands = mutableListOf<com.example.teraluxapp.data.network.StateCommand>()
-                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("power", if (isOn) 1 else 0))
-                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("temp", temp))
-                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("mode", modeIndex))
-                        stateCommands.add(com.example.teraluxapp.data.network.StateCommand("wind", windIndex))
-                        
-                        val stateRequest = com.example.teraluxapp.data.network.SaveDeviceStateRequest(commands = stateCommands)
-                        RetrofitClient.instance.saveDeviceState("Bearer $token", deviceId, stateRequest)
                     } else {
                         android.util.Log.e("SmartACScreen", "Command Failed: ${response.code()}")
                         snackbarHostState.showSnackbar("Command failed")

@@ -54,19 +54,6 @@ interface ApiService {
     suspend fun flushCache(
         @Header("Authorization") token: String
     ): Response<BaseResponse<Any?>>
-
-    @POST("api/devices/{id}/state")
-    suspend fun saveDeviceState(
-        @Header("Authorization") token: String,
-        @Path("id") deviceId: String,
-        @Body request: SaveDeviceStateRequest
-    ): Response<BaseResponse<Any?>>
-
-    @GET("api/devices/{id}/state")
-    suspend fun getDeviceState(
-        @Header("Authorization") token: String,
-        @Path("id") deviceId: String
-    ): Response<BaseResponse<DeviceStateResponse?>>
 }
 
 

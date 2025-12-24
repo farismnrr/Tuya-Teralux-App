@@ -6,4 +6,6 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - DB_HOST=${DB_HOST}
     restart: unless-stopped

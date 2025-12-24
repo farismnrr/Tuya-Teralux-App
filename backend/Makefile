@@ -1,6 +1,6 @@
 # Teralux App Backend - Makefile for Development Automation
 
-.PHONY: help dev start install-watch build build-docker start-docker push pull-docker start-compose stop-compose update test clean kill
+.PHONY: help dev start install-watch build build-docker start-docker push pull-docker start-compose stop-compose update test clean kill migrate-up migrate-down migrate-version
 
 # Default target
 help:
@@ -20,6 +20,9 @@ help:
 	@echo "  make test             - Run all unit tests"
 	@echo "  make clean            - Clean build artifacts"
 	@echo "  make kill             - Kill process running on PORT 8080"
+	@echo "  make migrate-up       - Run all pending migrations"
+	@echo "  make migrate-down     - Rollback last migration"
+	@echo "  make migrate-version  - Show current migration version"
 	@echo ""
 
 # Run development server with hot reload (requires air)
@@ -52,40 +55,53 @@ DOCKER_TAG = latest
 
 # Build via Docker
 build-docker:
-	@echo "🐳 Building Docker image..."
-	docker build -t $(DOCKER_IMAGE_NAME) .
+	@echo "🐳 Building Docker images..."
+	@echo "  Building latest (no auto-migrate)..."
+	docker build -t $(GHCR_REPO):latest --build-arg AUTO_MIGRATE=false .
+	@echo "  Building dev (auto-migrate)..."
+	docker build -t $(GHCR_REPO):dev --build-arg AUTO_MIGRATE=true .
 
-# Run via Docker (with .env)
-start-docker:
-	@echo "🚀 Starting Docker container..."
-	docker run --rm -it -p 8080:8080 --env-file .env $(DOCKER_IMAGE_NAME)
+# Start dev container locally
+start-docker-dev:
+	@echo "🚀 Starting Dev Docker container..."
+	docker run --rm -it -p 8080:8080 --env-file .env $(DOCKER_IMAGE_NAME):dev
 
 # Push to GHCR (reads env vars)
 push:
 	@echo "🔐 Logging in to GHCR..."
 	@export $$(grep -v '^#' .env | grep -v '^$$' | sed 's/#.*//g' | xargs) && \
 	(echo "$${CR_PAT:-$$GITHUB_TOKEN}" | docker login ghcr.io -u farismnrr --password-stdin)
-	@echo "🚀 Setting up Docker Buildx..."
-	# Create a new builder instance if it doesn't exist, or use the existing one
-	docker buildx inspect multi-arch-builder > /dev/null 2>&1 || docker buildx create --name multi-arch-builder --use
-	@echo "🚀 Building and Pushing to GHCR (Multi-arch: amd64, arm64)..."
-	docker buildx build --platform linux/amd64,linux/arm64 -t $(GHCR_REPO):$(DOCKER_TAG) --push .
-	@echo "✅ Image pushed to $(GHCR_REPO):$(DOCKER_TAG)"
+	@read -p "Enter tag to push (default: latest): " TAG; \
+	TAG=$${TAG:-latest}; \
+	echo "🚀 Setting up Docker Buildx..."; \
+	docker buildx inspect multi-arch-builder > /dev/null 2>&1 || docker buildx create --name multi-arch-builder --use; \
+	echo "🚀 Building and Pushing '$$TAG' (Multi-arch: amd64, arm64)..."; \
+	docker buildx build --platform linux/amd64,linux/arm64 --build-arg AUTO_MIGRATE=false -t $(GHCR_REPO):$$TAG --push .; \
+	echo "🚀 Building and Pushing 'dev' (Multi-arch: amd64, arm64)..."; \
+	docker buildx build --platform linux/amd64,linux/arm64 --build-arg AUTO_MIGRATE=true -t $(GHCR_REPO):dev --push .; \
+	echo "✅ Images pushed to GHCR (Tags: $$TAG, dev)"
 
 # Pull latest image for Docker Compose
 pull-docker:
-	@echo "📥 Pulling latest Docker image..."
+	@echo "📥 Pulling Docker images..."
 	docker compose pull
+	docker compose -f docker-compose.dev.yml pull
 
-# Start Docker Compose (pulls first)
-start-compose: pull-docker
-	@echo "🚀 Starting Docker Compose stack..."
-	docker compose up -d
+# Start Docker Compose (Production/Latest)
+start-compose:
+	@echo "🚀 Starting Docker Compose (Latest)..."
+	docker compose -f docker-compose.yml up -d
+
+# Start Docker Compose (Dev)
+start-compose-dev:
+	@echo "🚀 Starting Docker Compose (Dev)..."
+	docker compose -f docker-compose.dev.yml up -d
 
 # Stop Docker Compose
 stop-compose:
-	@echo "🛑 Stopping Docker Compose stack..."
-	docker compose down
+	@echo "🛑 Stopping Docker Compose usage..."
+	docker compose -f docker-compose.yml down
+	docker compose -f docker-compose.dev.yml down
 
 # Update running container using Watchtower
 update:
@@ -117,3 +133,42 @@ clean:
 kill:
 	@echo "🔪 Killing processes on port 8080..."
 	@lsof -ti:8080 | xargs -r kill -9 || echo "✅ No process running on port 8080"
+
+# --- Database Migration Configuration ---
+MIGRATE_VERSION = v4.18.1
+MIGRATE_URL = https://github.com/golang-migrate/migrate/releases/download/$(MIGRATE_VERSION)/migrate.linux-amd64.tar.gz
+MIGRATE_BIN = $(shell go env GOPATH)/bin/migrate
+
+# Load environment variables
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
+# Database connection string from .env
+DB_URL = mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)?charset=utf8mb4&parseTime=True&loc=Local
+
+# Install golang-migrate if not found
+$(MIGRATE_BIN):
+	@echo "📦 Installing golang-migrate..."
+	@mkdir -p $(shell go env GOPATH)/bin
+	@curl -L $(MIGRATE_URL) | tar xvz -C $(shell go env GOPATH)/bin
+	@chmod +x $(MIGRATE_BIN)
+	@echo "✅ golang-migrate installed successfully"
+
+# Run all pending migrations
+migrate-up: $(MIGRATE_BIN)
+	@echo "⬆️  Running migrations..."
+	@$(MIGRATE_BIN) -path domain/teralux/migrations -database "$(DB_URL)" up
+	@echo "✅ Migrations completed"
+
+# Rollback last migration
+migrate-down: $(MIGRATE_BIN)
+	@echo "⬇️  Rolling back last migration..."
+	@$(MIGRATE_BIN) -path domain/teralux/migrations -database "$(DB_URL)" down 1
+	@echo "✅ Rollback completed"
+
+# Show current migration version
+migrate-version: $(MIGRATE_BIN)
+	@echo "📊 Current migration version:"
+	@$(MIGRATE_BIN) -path domain/teralux/migrations -database "$(DB_URL)" version

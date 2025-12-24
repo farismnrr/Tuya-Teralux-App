@@ -67,10 +67,11 @@ definitions:
         type: string
       name:
         type: string
-        description: "Device name (uses remote_name if available)"
       online:
         type: boolean
       product_name:
+        type: string
+      remote_category:
         type: string
       remote_id:
         type: string
@@ -151,7 +152,7 @@ paths:
       - BearerAuth: []
       summary: Flush all cache
       tags:
-      - Cache
+      - 05. Flush
   /api/tuya/auth:
     get:
       consumes:
@@ -177,13 +178,15 @@ paths:
       - ApiKeyAuth: []
       summary: Authenticate with Tuya
       tags:
-      - Authentication
+      - 01. Auth
   /api/tuya/devices:
     get:
       consumes:
       - application/json
       description: 'Retrieves a list of all devices. Response format depends on GET_ALL_DEVICES_RESPONSE_TYPE:
-        0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name.'
+        0 (Nested/Default), 1 (Flat), 2 (Merged). Sorted alphabetically by Name. For
+        infrared_ac devices, the status array is populated with saved device state
+        (power, temp, mode, wind) or default values if no state exists.'
       parameters:
       - description: Page number
         in: query
@@ -217,12 +220,13 @@ paths:
       - BearerAuth: []
       summary: Get All Devices
       tags:
-      - Devices
+      - 02. Devices
   /api/tuya/devices/{id}:
     get:
       consumes:
       - application/json
-      description: Retrieves details of a specific device by its ID
+      description: Retrieves details of a specific device by its ID. Response includes
+        last_commands field containing the last control commands sent to the device.
       parameters:
       - description: Device ID
         in: path
@@ -253,7 +257,7 @@ paths:
       - BearerAuth: []
       summary: Get Device by ID
       tags:
-      - Devices
+      - 02. Devices
   /api/tuya/devices/{id}/commands/ir:
     post:
       consumes:
@@ -290,7 +294,7 @@ paths:
       - BearerAuth: []
       summary: Send IR AC Command
       tags:
-      - Device Control
+      - 03. Device Control
   /api/tuya/devices/{id}/commands/switch:
     post:
       consumes:
@@ -327,7 +331,7 @@ paths:
       - BearerAuth: []
       summary: Send Command to Device
       tags:
-      - Device Control
+      - 03. Device Control
   /api/tuya/devices/{id}/sensor:
     get:
       consumes:
@@ -364,7 +368,24 @@ paths:
       - BearerAuth: []
       summary: Get Sensor Data
       tags:
-      - Sensors
+      - 04. Device Sensor
+  /health:
+    get:
+      description: Check if the application and database are healthy
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "503":
+          description: Service Unavailable
+          schema:
+            type: string
+      summary: Health check endpoint
+      tags:
+      - Health
 securityDefinitions:
   ApiKeyAuth:
     in: header
@@ -376,3 +397,16 @@ securityDefinitions:
     name: Authorization
     type: apiKey
 swagger: "2.0"
+tags:
+- description: Authentication endpoints
+  name: 01. Auth
+- description: Device management endpoints
+  name: 02. Devices
+- description: Device control endpoints
+  name: 03. Device Control
+- description: Sensor data endpoints
+  name: 04. Device Sensor
+- description: Cache management endpoints
+  name: 05. Flush
+- description: Health check endpoints
+  name: 06. Health
